@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Directorio de Proveedores — Cremac</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ===== AUTH SCREEN ===== -->
+<div id="authScreen">
+  <div class="auth-decorations" id="authDeco"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <img id="authLogo" src="" alt="Cremac" onerror="this.style.display='none';document.getElementById('authLogoFallback').style.display='flex'">
+      <div id="authLogoFallback" class="auth-logo-fallback" style="display:none">C</div>
+    </div>
+    <div class="auth-title">Directorio de Proveedores</div>
+    <div class="auth-subtitle">🧀 Ingresá con tu cuenta</div>
+    <div class="form-group">
+      <label>Correo electrónico</label>
+      <input type="email" id="loginEmail" placeholder="tu@correo.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div id="authError" style="display:none;background:var(--danger-bg);color:var(--danger);padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:12px;"></div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()">Ingresar</button>
+    <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-muted)">
+      🔒 Acceso restringido — Solo usuarios autorizados
+      <div style="margin-top:20px;font-size:11px;color:var(--text-muted)">Desarrollado por Eric Cantoni · 2025</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP SCREEN ===== -->
+<div id="appScreen">
+  <header class="app-header">
+    <div class="header-logo">
+      <img id="headerLogo" src="" alt="Cremac" onerror="this.style.display='none'">
+      <div>
+        <div class="header-logo-fallback" id="headerName">Cremac</div>
+        <div class="header-title">Directorio de Proveedores</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="user-badge" onclick="doLogout()">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <span class="user-name" id="userName">Usuario</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </div>
+    </div>
+  </header>
+
+  <nav class="app-nav">
+    <button class="nav-tab active" onclick="showTab('proveedores')" id="tab-proveedores">
+      🧀 Proveedores
+    </button>
+    <button class="nav-tab" onclick="showTab('admin')" id="tab-admin" style="display:none">
+      ⚙️ Administración
+    </button>
+  </nav>
+
+  <main class="app-main">
+    <!-- PROVEEDORES TAB -->
+    <div id="paneProveedores">
+      <div class="stats-row" id="statsRow"></div>
+      <div class="section-header">
+        <div class="section-title">🏭 Proveedores</div>
+        <div class="section-actions">
+          <button class="btn btn-ghost btn-sm" onclick="exportExcel()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Exportar Excel
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="openProvModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo Proveedor
+          </button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="searchProv" placeholder="Buscar por nombre, rubro, localidad..." oninput="renderProveedores()">
+        </div>
+        <select class="filter-select" id="filterRubro" onchange="renderProveedores()">
+          <option value="">Todos los rubros</option>
+        </select>
+        <select class="filter-select" id="filterEstado" onchange="renderProveedores()" style="min-width:130px">
+          <option value="activo">Solo activos</option>
+          <option value="">Todos</option>
+          <option value="inactivo">Inactivos</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Proveedor</th>
+              <th>Rubro</th>
+              <th>Localidad</th>
+              <th>Contactos</th>
+              <th>Estado</th>
+              <th>Modificado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="provTableBody"></tbody>
+        </table>
+      </div>
+      <div class="prov-cards" id="provCards"></div>
+    </div>
+
+    <!-- ADMIN TAB -->
+    <div id="paneAdmin" style="display:none">
+      <div class="section-header">
+        <div class="section-title">⚙️ Administración</div>
+      </div>
+      <div class="admin-grid">
+        <!-- Empresa -->
+        <div class="admin-card">
+          <div class="admin-card-header">🏢 Datos de la Empresa</div>
+          <div class="admin-card-body">
+            <div class="form-group">
+              <label>Logo de la empresa</label>
+              <div class="logo-upload-area" onclick="document.getElementById('logoFileInput').click()">
+                <img id="logoPreview" src="" style="display:none" alt="Logo">
+                <p id="logoUploadText">📁 Clic para subir logo (PNG, JPG)</p>
+              </div>
+              <input type="file" id="logoFileInput" accept="image/*" onchange="handleLogoUpload(event)">
+            </div>
+            <div class="form-group">
+              <label>Nombre de la empresa</label>
+              <input type="text" id="cfg_nombre" placeholder="Cremac">
+            </div>
+            <div class="form-group">
+              <label>Dirección</label>
+              <input type="text" id="cfg_direccion" placeholder="Av. Principal 1234">
+            </div>
+            <div class="form-group">
+              <label>Teléfono</label>
+              <input type="tel" id="cfg_telefono" placeholder="(0000) 000-0000">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="cfg_email" placeholder="contacto@empresa.com">
+            </div>
+            <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="saveConfig()">Guardar configuración</button>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+              <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;white-space:nowrap">Rótulo</span>
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="openModalRotuloDesign()">✏️ Editar diseño del rótulo</button>
+          </div>
+        </div>
+
+        <!-- Usuarios -->
+        <div class="admin-card" style="grid-column: 1 / -1">
+          <div class="admin-card-header" style="justify-content:space-between">
+            <span>👥 Usuarios</span>
+            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:white;font-size:12px" onclick="openUserModal()">+ Nuevo usuario</button>
+          </div>
+          <div class="admin-card-body">
+            <table class="users-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ===== MODAL: PROVEEDOR ===== -->
+<div class="modal-overlay" id="modalProv">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">🧀</span> <span id="modalProvTitle">Nuevo Proveedor</span></div>
+      <button class="btn-close" onclick="closeModal('modalProv')">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Nombre / Razón Social *</label>
+        <input type="text" id="p_nombre" placeholder="Ej: Distribuidora Norte SA">
+      </div>
+      <div class="form-group">
+        <label>Rubro</label>
+        <input type="text" id="p_rubro" placeholder="Ej: Materiales eléctricos">
+      </div>
+      <div class="form-group">
+        <label>Email general</label>
+        <input type="email" id="p_email" placeholder="empresa@proveedor.com">
+      </div>
+      <div class="form-group full">
+        <label>Dirección</label>
+        <input type="text" id="p_direccion" placeholder="Calle, número, piso">
+      </div>
+      <div class="form-group">
+        <label>Localidad</label>
+        <input type="text" id="p_localidad" placeholder="Ej: Córdoba">
+      </div>
+      <div class="form-group">
+        <label>Provincia</label>
+        <input type="text" id="p_provincia" placeholder="Ej: Córdoba">
+      </div>
+      <div class="form-group">
+        <label>Código Postal</label>
+        <input type="text" id="p_codigo_postal" placeholder="Ej: 5000">
+      </div>
+      <div class="form-group full">
+        <label>Horario de atención</label>
+        <input type="text" id="p_horario" placeholder="Ej: Lun-Vie 8 a 17hs">
+      </div>
+      <div class="form-group full">
+        <label>Notas / Observaciones</label>
+        <textarea id="p_notas" placeholder="Información adicional..."></textarea>
+      </div>
+      <div class="form-group full">
+        <label>Estado</label>
+        <select id="p_activo">
+          <option value="true">✅ Activo</option>
+          <option value="false">⬜ Inactivo</option>
+        </select>
+      </div>
+
+      <!-- CONTACTOS -->
+      <div class="contacts-section">
+        <div class="contacts-header">
+          <span class="contacts-title">👤 Contactos</span>
+          <button class="btn btn-ghost btn-sm" onclick="addContactRow()">+ Agregar contacto</button>
+        </div>
+        <div id="contactsContainer">
+          <!-- contact rows injected here -->
+        </div>
+        <div id="noContactsMsg" style="font-size:13px;color:var(--text-muted);text-align:center;padding:12px 0">
+          Sin contactos aún. Hacé clic en "Agregar contacto".
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalProv')">Cancelar</button>
+      <button class="btn btn-success" onclick="saveProveedor()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: DETALLE PROVEEDOR ===== -->
+<div class="modal-overlay" id="modalDetail">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">🏭</span> <span id="detailTitle">Detalle</span></div>
+      <button class="btn-close" onclick="closeModal('modalDetail')">✕</button>
+    </div>
+    <div id="detailBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalDetail')">Cerrar</button>
+      <button class="btn btn-primary btn-sm" onclick="openRotuloFromDetail()">🏷️ Generar Rótulo</button>
+      <button class="btn btn-primary btn-sm" id="detailEditBtn" onclick="">✏️ Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: RÓTULO ===== -->
+<div class="modal-overlay" id="modalRotulo">
+  <div class="modal" style="max-width:1100px;width:100%">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">🏷️</span> Editor de Rótulo</div>
+      <button class="btn-close" onclick="closeModal('modalRotulo')">✕</button>
+    </div>
+
+    <div class="rotulo-modal-grid">
+
+      <!-- Contenido -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="margin-bottom:8px;display:block">📐 Tamaño</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
+            <button class="size-btn active" data-w="21" data-h="29.7" onclick="selectSize(this,'a4')">A4</button>
+            <button class="size-btn" data-w="21.6" data-h="27.9" onclick="selectSize(this,'carta')">Carta</button>
+            <button class="size-btn" data-w="21" data-h="14.8" onclick="selectSize(this,'media')">Media A4</button>
+            <button class="size-btn" data-w="15" data-h="10" onclick="selectSize(this,'15x10')">15×10</button>
+            <button class="size-btn" data-w="10" data-h="7" onclick="selectSize(this,'etiqueta')">10×7</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1">
+              <label style="font-size:11px;margin-bottom:3px;display:block">Ancho (cm)</label>
+              <input type="number" id="rotulo_w" value="21" min="5" max="60" step="0.5" oninput="onCustomSizeInput('rotulo')" style="width:100%;padding:7px 10px;border-radius:6px;border:1.5px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text)">
+            </div>
+            <div style="padding-top:18px;color:var(--text-muted);font-weight:700">×</div>
+            <div style="flex:1">
+              <label style="font-size:11px;margin-bottom:3px;display:block">Alto (cm)</label>
+              <input type="number" id="rotulo_h" value="29.7" min="5" max="60" step="0.5" oninput="onCustomSizeInput('rotulo')" style="width:100%;padding:7px 10px;border-radius:6px;border:1.5px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text)">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Detalle / Descripción</label>
+          <textarea id="rotuloDetalle" placeholder="Ej: Motor eléctrico para reparación — N° interno 0452" rows="4" oninput="renderRotuloPreview()"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Texto adicional (opcional)</label>
+          <input type="text" id="rotuloExtra" placeholder="Ej: URGENTE — Contactar antes de recibir" oninput="renderRotuloPreview()">
+        </div>
+      </div>
+
+      <!-- Vista previa -->
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:10px">Vista previa</div>
+        <div id="rotuloPreviewWrap" style="background:#d0d0d0;border-radius:10px;padding:16px">
+          <div id="rotuloPreview" style="width:100%"></div>
+        </div>
+        <div style="margin-top:6px;font-size:11px;color:var(--text-muted);text-align:center">El diseño lo configura el administrador</div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalRotulo')">Cancelar</button>
+      <button class="btn btn-ghost" onclick="previewPDF()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Vista previa / Imprimir
+      </button>
+      <button class="btn btn-red" onclick="generatePDF()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descargar PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: DISEÑO RÓTULO (ADMIN) ===== -->
+<div class="modal-overlay" id="modalRotuloDesign">
+  <div class="modal" style="max-width:980px;width:100%">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">🏷️</span> Editor de Diseño del Rótulo</div>
+      <button class="btn-close" onclick="closeModal('modalRotuloDesign')">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:270px 1fr;gap:20px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:10px;max-height:68vh;overflow-y:auto;padding-right:4px">
+
+        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">📐 Tamaño de vista previa</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
+            <button class="size-btn active" data-w="21" data-h="29.7" onclick="selectDesignSize(this,'a4')">A4</button>
+            <button class="size-btn" data-w="21.6" data-h="27.9" onclick="selectDesignSize(this,'carta')">Carta</button>
+            <button class="size-btn" data-w="21" data-h="14.8" onclick="selectDesignSize(this,'media')">Media A4</button>
+            <button class="size-btn" data-w="15" data-h="10" onclick="selectDesignSize(this,'15x10')">15×10</button>
+            <button class="size-btn" data-w="10" data-h="7" onclick="selectDesignSize(this,'etiqueta')">10×7</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1">
+              <label style="font-size:11px;margin-bottom:3px;display:block">Ancho (cm)</label>
+              <input type="number" id="design_w" value="21" min="5" max="60" step="0.5" oninput="onCustomSizeInput('design')" style="width:100%;padding:7px 10px;border-radius:6px;border:1.5px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text)">
+            </div>
+            <div style="padding-top:18px;color:var(--text-muted);font-weight:700">×</div>
+            <div style="flex:1">
+              <label style="font-size:11px;margin-bottom:3px;display:block">Alto (cm)</label>
+              <input type="number" id="design_h" value="29.7" min="5" max="60" step="0.5" oninput="onCustomSizeInput('design')" style="width:100%;padding:7px 10px;border-radius:6px;border:1.5px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text)">
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🎨 Colores</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Fondo header</label><input type="color" id="rc_headerBg" value="#1a3a6b" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Barra decorativa</label><input type="color" id="rc_barColor" value="#c8222a" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Color del título</label><input type="color" id="rc_titleColor" value="#1a3a6b" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Color del texto</label><input type="color" id="rc_textColor" value="#333333" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Fondo del cuerpo</label><input type="color" id="rc_bodyBg" value="#ffffff" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Texto nombre empresa</label><input type="color" id="rc_empresaColor" value="#ffffff" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Marco del rótulo</label><input type="color" id="rc_marcoColor" value="#1a3a6b" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+          </div>
+        </div>
+
+        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🖼️ Logo</div>
+          <div class="form-group" style="margin-bottom:8px">
+            <label>Tamaño</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="rc_logoSize" min="20" max="80" value="40" oninput="document.getElementById('rc_logoSizeVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1">
+              <span id="rc_logoSizeVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">40px</span>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Posición</label>
+            <select id="rc_logoPos" onchange="updateAdminPreview()">
+              <option value="left">Izquierda</option>
+              <option value="center">Centro</option>
+              <option value="right">Derecha</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🏢 Nombre empresa</div>
+          <div class="form-group" style="margin-bottom:8px">
+            <label>Fuente</label>
+            <select id="rc_empresaFont" onchange="updateAdminPreview()">
+              <option value="Arial,sans-serif">Arial</option>
+              <option value="Georgia,serif">Georgia</option>
+              <option value="Verdana,sans-serif">Verdana</option>
+              <option value="Tahoma,sans-serif">Tahoma</option>
+              <option value="Impact,sans-serif">Impact</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:8px">
+            <label>Tamaño</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="rc_empresaSize" min="8" max="32" value="14" oninput="document.getElementById('rc_empresaSizeVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1">
+              <span id="rc_empresaSizeVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">14px</span>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:8px">
+            <label>Posición</label>
+            <select id="rc_empresaPos" onchange="updateAdminPreview()">
+              <option value="left">Junto al logo</option>
+              <option value="center">Centro</option>
+              <option value="right">Derecha</option>
+              <option value="hidden">Ocultar</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🏭 Nombre proveedor</div>
+          <div class="form-group" style="margin-bottom:8px">
+            <label>Fuente</label>
+            <select id="rc_provFont" onchange="updateAdminPreview()">
+              <option value="Arial,sans-serif">Arial</option>
+              <option value="Georgia,serif">Georgia</option>
+              <option value="Verdana,sans-serif">Verdana</option>
+              <option value="Tahoma,sans-serif">Tahoma</option>
+              <option value="Impact,sans-serif">Impact</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:8px">
+            <label>Tamaño</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="rc_provSize" min="10" max="36" value="18" oninput="document.getElementById('rc_provSizeVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1">
+              <span id="rc_provSizeVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">18px</span>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Alineación</label>
+            <select id="rc_provAlign" onchange="updateAdminPreview()">
+              <option value="left">Izquierda</option>
+              <option value="center">Centro</option>
+              <option value="right">Derecha</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🔲 Bordes y líneas</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:6px">Marco del rótulo</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <input type="range" id="rc_marcoWidth" min="0" max="8" value="1" oninput="document.getElementById('rc_marcoWidthVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1">
+            <span id="rc_marcoWidthVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">1px</span>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:6px">Barra divisoria</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="range" id="rc_barHeight" min="0" max="12" value="4" oninput="document.getElementById('rc_barHeightVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1">
+            <span id="rc_barHeightVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">4px</span>
+          </div>
+        </div>
+
+        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">📋 Campos visibles</div>
+          <div id="rotuloToggleList"></div>
+          <div class="divider"></div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Pie de página</label>
+            <input type="text" id="cfg_pie" placeholder="Ej: San Marcos Sud, Córdoba">
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Vista previa con proporcion real -->
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:8px">Vista previa</div>
+        <div id="adminPreviewWrap" style="background:#d0d0d0;border-radius:10px;padding:16px;transition:all 0.3s">
+          <div id="adminRotuloPreview"></div>
+        </div>
+        <div id="adminPreviewLabel" style="margin-top:8px;font-size:11px;font-weight:700;color:var(--text-muted);text-align:center;letter-spacing:0.5px"></div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="resetRotuloDesign()">↺ Restablecer original</button>
+      <button class="btn btn-ghost" onclick="closeModal('modalRotuloDesign')">Cancelar</button>
+      <button class="btn btn-success" onclick="saveRotuloDesignFromAdmin()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar diseño predeterminado
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: USUARIO ===== -->
+<div class="modal-overlay" id="modalUser">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">👤</span> <span id="modalUserTitle">Nuevo Usuario</span></div>
+      <button class="btn-close" onclick="closeModal('modalUser')">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" id="u_nombre" placeholder="Juan">
+      </div>
+      <div class="form-group">
+        <label>Apellido</label>
+        <input type="text" id="u_apellido" placeholder="Pérez">
+      </div>
+      <div class="form-group full">
+        <label>Correo electrónico</label>
+        <input type="email" id="u_email" placeholder="juan@cremac.com">
+      </div>
+      <div class="form-group full" id="u_passGroup">
+        <label>Contraseña</label>
+        <input type="password" id="u_pass" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div class="form-group full">
+        <label>Rol</label>
+        <select id="u_rol">
+          <option value="user">Usuario</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalUser')">Cancelar</button>
+      <button class="btn btn-success" onclick="saveUser()">Guardar usuario</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
