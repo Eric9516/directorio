@@ -17,4 +17,8 @@ export const state = {
   contactRowCounter: 0,
   selectedSize: 'a4',
   selectedDesignSize: 'a4',
+  // Tareas Semáforo
+  activeModule: null, // 'directorio' | 'tareas'
+  tareas: [],
+  currentTaskId: null,
 };

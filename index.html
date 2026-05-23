@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/admin.css">
 <link rel="stylesheet" href="css/mobile.css">
+<link rel="stylesheet" href="css/tareas.css">
 </head>
 <body>
 
@@ -53,6 +54,9 @@
       </div>
     </div>
     <div class="header-right">
+      <button class="header-switch" id="headerSwitchBtn" style="display:none" onclick="switchModule()">
+        <span id="headerSwitchLabel">📋 Tareas</span>
+      </button>
       <div class="user-badge" onclick="doLogout()">
         <div class="user-avatar" id="userAvatar">U</div>
         <span class="user-name" id="userName">Usuario</span>
@@ -66,6 +70,32 @@
     </div>
   </header>
 
+  <!-- ===== LAUNCHER ===== -->
+  <div id="launcherScreen">
+    <div class="launcher-wrap">
+      <div class="launcher-greeting" id="launcherGreeting">Hola 👋</div>
+      <div class="launcher-title">¿Qué querés hacer?</div>
+      <div class="launcher-cards">
+        <div class="launcher-card" onclick="openModule('directorio')">
+          <div class="launcher-card-icon">🧀</div>
+          <div>
+            <div class="launcher-card-name">Directorio</div>
+            <div class="launcher-card-desc">Proveedores y comisionistas</div>
+          </div>
+        </div>
+        <div class="launcher-card" onclick="openModule('tareas')">
+          <div class="launcher-card-icon">🚦</div>
+          <div>
+            <div class="launcher-card-name">Tareas</div>
+            <div class="launcher-card-desc">Detectá qué tareas estás arrastrando</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DIRECTORIO WRAP ===== -->
+  <div id="directorioWrap" style="display:none">
   <nav class="app-nav">
     <button class="nav-tab active" onclick="showTab('proveedores')" id="tab-proveedores">
       🧀 Proveedores
@@ -265,6 +295,61 @@
       </div>
     </div>
   </main>
+  </div><!-- /directorioWrap -->
+
+  <!-- ===== TAREAS WRAP ===== -->
+  <div id="tareasWrap" style="display:none">
+  <main class="app-main">
+    <div id="paneTareas" style="display:block">
+      <div class="section-header">
+        <div class="section-title">🚦 Hoy</div>
+        <div class="section-actions">
+          <button class="btn btn-primary btn-sm" onclick="openNewTaskModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nueva tarea
+          </button>
+        </div>
+      </div>
+
+      <div class="tareas-date" id="tareasDate"></div>
+      <div class="tareas-stats" id="tareasStats"></div>
+
+      <div class="tareas-filters">
+        <button class="tareas-filter-btn active" data-filter="todas" onclick="setTareasFilter('todas')">Todas</button>
+        <button class="tareas-filter-btn" data-filter="red" onclick="setTareasFilter('red')">🔴 Rojas</button>
+        <button class="tareas-filter-btn" data-filter="yellow" onclick="setTareasFilter('yellow')">🟡 Amarillas</button>
+        <button class="tareas-filter-btn" data-filter="green" onclick="setTareasFilter('green')">🟢 Verdes</button>
+        <button class="tareas-filter-btn" data-filter="stagnant" onclick="setTareasFilter('stagnant')">⚠ Estancadas</button>
+        <button class="tareas-filter-btn" data-filter="completed" onclick="setTareasFilter('completed')">✅ Completadas</button>
+      </div>
+
+      <div id="tareasListContainer"></div>
+    </div>
+  </main>
+  </div><!-- /tareasWrap -->
+
+  <!-- ===== BOTTOM NAV (mobile, solo en tareas) ===== -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-items">
+      <button class="bottom-nav-item active" data-tab="hoy" onclick="showTareasTab('hoy')">
+        <span class="bottom-nav-icon">🚦</span>
+        Hoy
+      </button>
+      <button class="bottom-nav-item" data-tab="nueva" onclick="showTareasTab('nueva')">
+        <span class="bottom-nav-icon">➕</span>
+        Nueva
+      </button>
+      <button class="bottom-nav-item" data-tab="cierre" onclick="showTareasTab('cierre')">
+        <span class="bottom-nav-icon">📊</span>
+        Cierre
+      </button>
+      <button class="bottom-nav-item" data-tab="perfil" onclick="showTareasTab('perfil')">
+        <span class="bottom-nav-icon">👤</span>
+        Perfil
+      </button>
+    </div>
+  </nav>
+
 </div>
 
 <!-- ===== MODAL: PROVEEDOR ===== -->
@@ -626,6 +711,94 @@
   </div>
 </div>
 
+<!-- ===== MODAL: NUEVA TAREA ===== -->
+<div class="modal-overlay" id="modalNewTask">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">🚦</span> Nueva Tarea</div>
+      <button class="btn-close" onclick="closeModal('modalNewTask')">✕</button>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr">
+      <div class="form-group">
+        <label>Título *</label>
+        <input type="text" id="nt_titulo" placeholder="¿Qué tenés que hacer?">
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <textarea id="nt_descripcion" placeholder="Detalles opcionales..." rows="3"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Prioridad inicial</label>
+        <select id="nt_semaforo">
+          <option value="green">🟢 Normal</option>
+          <option value="yellow">🟡 Atención</option>
+          <option value="red">🔴 Crítica</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Fecha asignada</label>
+        <input type="date" id="nt_fecha">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalNewTask')">Cancelar</button>
+      <button class="btn btn-success" onclick="saveNewTask()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: DETALLE TAREA ===== -->
+<div class="modal-overlay" id="modalTaskDetail">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">🚦</span> <span id="taskDetailTitle">Detalle</span></div>
+      <button class="btn-close" onclick="closeModal('modalTaskDetail')">✕</button>
+    </div>
+    <div id="taskDetailBody"></div>
+    <div class="modal-footer" id="taskDetailActions">
+      <button class="btn btn-ghost" onclick="closeModal('modalTaskDetail')">Cerrar</button>
+      <button class="btn btn-ghost" onclick="openReprogramModal()">📅 Reprogramar</button>
+      <button class="btn btn-danger-ghost" onclick="cancelTask(window._currentTaskId())">❌ Cancelar</button>
+      <button class="btn btn-success" onclick="completeTask(window._currentTaskId())">✓ Completar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: REPROGRAMAR ===== -->
+<div class="modal-overlay" id="modalReprogram">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">📅</span> Reprogramar</div>
+      <button class="btn-close" onclick="closeModal('modalReprogram')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Nueva fecha asignada</label>
+      <input type="date" id="rp_fecha">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalReprogram')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveReprogram()">Reprogramar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: CIERRE DEL DÍA ===== -->
+<div class="modal-overlay" id="modalDayClose">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">📊</span> Cierre del día</div>
+      <button class="btn-close" onclick="closeModal('modalDayClose')">✕</button>
+    </div>
+    <div id="dayCloseBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalDayClose')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -651,6 +824,10 @@
     </button>
     <button class="mobile-nav-item" id="mm-admin" style="display:none" onclick="showTab('admin');closeMobileMenu()">
       <span class="mobile-nav-icon">⚙️</span><span>Administrador</span>
+    </button>
+    <div style="height:1px;background:var(--border);margin:8px 16px"></div>
+    <button class="mobile-nav-item" onclick="closeMobileMenu();goHome()">
+      <span class="mobile-nav-icon">🏠</span><span>Inicio</span>
     </button>
   </nav>
   <div class="mobile-menu-footer">

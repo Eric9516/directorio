@@ -15,6 +15,10 @@ import { openRotulo, selectSize, selectDesignSize, updateAdminPreview,
          saveRotuloDesignFromAdmin, resetRotuloDesign, onCustomSizeInput,
          renderRotuloPreview, generatePDF, previewPDF,
          openModalRotuloDesign, toggleRotuloCampo }                  from './rotulo.js';
+import { loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
+         openTaskDetail, completeTask, cancelTask,
+         openReprogramModal, saveReprogram,
+         openDayClose, processPendingTasks, showTareasTab }          from './tareas.js';
 
 // ===== APP INIT =====
 async function initApp() {
@@ -31,14 +35,76 @@ async function initApp() {
   document.getElementById('mobileUsername').textContent = fullName;
   document.getElementById('mobileEmail').textContent   = state.currentUser?.email || '';
   document.getElementById('mobileAvatar').textContent  = initial;
+  document.getElementById('launcherGreeting').textContent = `Hola, ${nombre} 👋`;
 
   if (state.isAdmin) {
     document.getElementById('tab-admin').style.display = 'flex';
     document.getElementById('mm-admin').style.display  = 'flex';
   }
 
-  await loadConfig();
-  await loadProveedores();
+  // Mostrar launcher en vez de ir directo al directorio
+  showLauncher();
+}
+
+// ===== LAUNCHER =====
+function showLauncher() {
+  state.activeModule = null;
+  document.body.classList.remove('tareas-mode');
+  document.getElementById('launcherScreen').classList.add('visible');
+  document.getElementById('directorioWrap').style.display = 'none';
+  document.getElementById('tareasWrap').style.display = 'none';
+  document.getElementById('headerSwitchBtn').style.display = 'none';
+}
+
+async function openModule(mod) {
+  document.getElementById('launcherScreen').classList.remove('visible');
+  document.getElementById('headerSwitchBtn').style.display = 'flex';
+
+  if (mod === 'directorio') {
+    state.activeModule = 'directorio';
+    document.body.classList.remove('tareas-mode');
+    document.getElementById('directorioWrap').style.display = 'block';
+    document.getElementById('tareasWrap').style.display = 'none';
+    document.getElementById('headerSwitchLabel').textContent = '📋 Tareas';
+    await loadConfig();
+    await loadProveedores();
+  } else if (mod === 'tareas') {
+    state.activeModule = 'tareas';
+    document.body.classList.add('tareas-mode');
+    document.getElementById('directorioWrap').style.display = 'none';
+    document.getElementById('tareasWrap').style.display = 'block';
+    document.getElementById('headerSwitchLabel').textContent = '🧀 Directorio';
+    await loadTareas();
+    // Auto-procesar tareas pendientes al entrar
+    try {
+      await fetch_rpc_silent();
+    } catch {}
+  }
+}
+
+async function fetch_rpc_silent() {
+  try {
+    const { sbFetch } = await import('./api.js');
+    await sbFetch('/rpc/process_pending_tasks_for_user', {
+      method: 'POST',
+      body: JSON.stringify({ target_user_id: state.currentUser.id })
+    });
+    await loadTareas();
+  } catch {}
+}
+
+function switchModule() {
+  if (state.activeModule === 'directorio') {
+    openModule('tareas');
+  } else if (state.activeModule === 'tareas') {
+    openModule('directorio');
+  } else {
+    showLauncher();
+  }
+}
+
+function goHome() {
+  showLauncher();
 }
 
 function showTab(tab) {
@@ -101,12 +167,13 @@ window.addEventListener('load', async () => {
 document.addEventListener('userReady', initApp);
 
 // ===== EXPONER AL SCOPE GLOBAL =====
-// Necesario porque el HTML usa atributos onclick="función()"
 Object.assign(window, {
   // Auth
   doLogin, doLogout,
   // Navegación
   showTab, toggleMobileMenu, closeMobileMenu, closeModal,
+  // Launcher
+  openModule, switchModule, goHome, showLauncher,
   // Proveedores
   renderProveedores, openProvModal, addContactRow, removeContactRow,
   saveProveedor, deleteProveedor, openDetail, openRotuloFromDetail, exportExcel,
@@ -122,4 +189,10 @@ Object.assign(window, {
   openRotulo, selectSize, selectDesignSize, updateAdminPreview,
   saveRotuloDesignFromAdmin, resetRotuloDesign, onCustomSizeInput,
   renderRotuloPreview, generatePDF, previewPDF, openModalRotuloDesign, toggleRotuloCampo,
+  // Tareas
+  loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
+  openTaskDetail, completeTask, cancelTask,
+  openReprogramModal, saveReprogram,
+  openDayClose, processPendingTasks, showTareasTab,
+  _currentTaskId: () => state.currentTaskId,
 });
