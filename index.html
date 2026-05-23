@@ -57,10 +57,22 @@
       <button class="header-switch" id="headerSwitchBtn" style="display:none" onclick="switchModule()">
         <span id="headerSwitchLabel">📋 Tareas</span>
       </button>
-      <div class="user-badge" onclick="doLogout()">
+      <div class="user-badge" onclick="toggleUserDropdown()">
         <div class="user-avatar" id="userAvatar">U</div>
         <span class="user-name" id="userName">Usuario</span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="user-dropdown" id="userDropdown">
+        <button class="user-dropdown-item" onclick="openProfile(); closeUserDropdown()">
+          <span>👤</span> Mi perfil
+        </button>
+        <button class="user-dropdown-item" onclick="goHome(); closeUserDropdown()">
+          <span>🏠</span> Inicio
+        </button>
+        <div style="height:1px;background:var(--border);margin:4px 0"></div>
+        <button class="user-dropdown-item user-dropdown-danger" onclick="doLogout()">
+          <span>🚪</span> Cerrar sesión
+        </button>
       </div>
       <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menú">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -799,6 +811,43 @@
   </div>
 </div>
 
+<!-- ===== MODAL: PERFIL ===== -->
+<div class="modal-overlay" id="modalProfile">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">👤</span> Mi perfil</div>
+      <button class="btn-close" onclick="closeModal('modalProfile')">✕</button>
+    </div>
+    <div style="text-align:center;margin-bottom:20px">
+      <div class="profile-avatar" id="profileAvatar">U</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px" id="profileEmail"></div>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" id="pf_nombre" placeholder="Tu nombre">
+      </div>
+      <div class="form-group">
+        <label>Apellido</label>
+        <input type="text" id="pf_apellido" placeholder="Tu apellido">
+      </div>
+    </div>
+    <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-top:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;font-weight:700;color:var(--text-mid)">Estado de acceso</span>
+        <span class="badge" id="profileAccessBadge"></span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalProfile')">Cancelar</button>
+      <button class="btn btn-success" onclick="saveProfile()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -826,6 +875,9 @@
       <span class="mobile-nav-icon">⚙️</span><span>Administrador</span>
     </button>
     <div style="height:1px;background:var(--border);margin:8px 16px"></div>
+    <button class="mobile-nav-item" onclick="closeMobileMenu();openProfile()">
+      <span class="mobile-nav-icon">👤</span><span>Mi perfil</span>
+    </button>
     <button class="mobile-nav-item" onclick="closeMobileMenu();goHome()">
       <span class="mobile-nav-icon">🏠</span><span>Inicio</span>
     </button>

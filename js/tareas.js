@@ -386,8 +386,7 @@ export function showTareasTab(tab) {
       openDayClose();
       break;
     case 'perfil':
-      // TODO: implementar en fase posterior
-      toast('Perfil — próximamente', 'success');
+      window.openProfile();
       break;
   }
 }

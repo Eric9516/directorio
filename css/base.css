@@ -114,6 +114,67 @@ input[type="file"] { display: none; }
 .btn-icon { padding: 8px; border-radius: 8px; }
 .btn-full { width: 100%; justify-content: center; padding: 13px; font-size: 15px; }
 
+/* ===== USER DROPDOWN (desktop) ===== */
+.user-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  border: 1.5px solid var(--border);
+  min-width: 180px;
+  z-index: 200;
+  padding: 6px;
+  animation: dropdownIn 0.15s ease;
+}
+.user-dropdown.open { display: block; }
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: background 0.12s;
+  text-align: left;
+}
+.user-dropdown-item:hover { background: var(--surface2); color: var(--text); }
+.user-dropdown-item.user-dropdown-danger { color: var(--danger); }
+.user-dropdown-item.user-dropdown-danger:hover { background: var(--danger-bg); }
+
+/* ===== PROFILE AVATAR ===== */
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 800;
+  font-family: var(--font);
+}
+
+/* ===== HEADER RIGHT relative for dropdown ===== */
+.header-right { position: relative; }
+
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

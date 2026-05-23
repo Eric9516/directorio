@@ -1,5 +1,5 @@
 import { state }                                                     from './state.js';
-import { closeModal, toggleMobileMenu, closeMobileMenu }             from './ui.js';
+import { closeModal, toast, toggleMobileMenu, closeMobileMenu }      from './ui.js';
 import { doLogin, doLogout, loadUserProfile }                        from './auth.js';
 import { loadConfig, saveConfig, handleLogoUpload }                  from './config.js';
 import { loadProveedores, renderProveedores,
@@ -19,30 +19,35 @@ import { loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
          openTaskDetail, completeTask, cancelTask,
          openReprogramModal, saveReprogram,
          openDayClose, processPendingTasks, showTareasTab }          from './tareas.js';
+import { sbFetch } from './api.js';
 
-// ===== APP INIT =====
-async function initApp() {
-  document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('appScreen').classList.add('visible');
-
+// ===== NOMBRE PERSONALIZADO =====
+function updateUserDisplay() {
   const nombre   = state.currentUser?.nombre   || state.currentUser?.email?.split('@')[0] || 'Usuario';
   const apellido = state.currentUser?.apellido || '';
   const fullName = `${nombre} ${apellido}`.trim();
-  const initial  = nombre[0].toUpperCase();
+  const initial  = (nombre[0] || 'U').toUpperCase();
 
   document.getElementById('userName').textContent      = fullName;
   document.getElementById('userAvatar').textContent    = initial;
   document.getElementById('mobileUsername').textContent = fullName;
   document.getElementById('mobileEmail').textContent   = state.currentUser?.email || '';
   document.getElementById('mobileAvatar').textContent  = initial;
-  document.getElementById('launcherGreeting').textContent = `Hola, ${nombre} 👋`;
+  document.getElementById('launcherGreeting').textContent = 'Hola, ' + nombre + ' \uD83D\uDC4B';
+}
+
+// ===== APP INIT =====
+async function initApp() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appScreen').classList.add('visible');
+
+  updateUserDisplay();
 
   if (state.isAdmin) {
     document.getElementById('tab-admin').style.display = 'flex';
     document.getElementById('mm-admin').style.display  = 'flex';
   }
 
-  // Mostrar launcher en vez de ir directo al directorio
   showLauncher();
 }
 
@@ -65,7 +70,7 @@ async function openModule(mod) {
     document.body.classList.remove('tareas-mode');
     document.getElementById('directorioWrap').style.display = 'block';
     document.getElementById('tareasWrap').style.display = 'none';
-    document.getElementById('headerSwitchLabel').textContent = '📋 Tareas';
+    document.getElementById('headerSwitchLabel').textContent = '\uD83D\uDCCB Tareas';
     await loadConfig();
     await loadProveedores();
   } else if (mod === 'tareas') {
@@ -73,24 +78,16 @@ async function openModule(mod) {
     document.body.classList.add('tareas-mode');
     document.getElementById('directorioWrap').style.display = 'none';
     document.getElementById('tareasWrap').style.display = 'block';
-    document.getElementById('headerSwitchLabel').textContent = '🧀 Directorio';
-    await loadTareas();
+    document.getElementById('headerSwitchLabel').textContent = '\uD83E\uDDC0 Directorio';
     // Auto-procesar tareas pendientes al entrar
     try {
-      await fetch_rpc_silent();
+      await sbFetch('/rpc/process_pending_tasks_for_user', {
+        method: 'POST',
+        body: JSON.stringify({ target_user_id: state.currentUser.id })
+      });
     } catch {}
-  }
-}
-
-async function fetch_rpc_silent() {
-  try {
-    const { sbFetch } = await import('./api.js');
-    await sbFetch('/rpc/process_pending_tasks_for_user', {
-      method: 'POST',
-      body: JSON.stringify({ target_user_id: state.currentUser.id })
-    });
     await loadTareas();
-  } catch {}
+  }
 }
 
 function switchModule() {
@@ -107,6 +104,69 @@ function goHome() {
   showLauncher();
 }
 
+// ===== USER DROPDOWN =====
+function toggleUserDropdown() {
+  document.getElementById('userDropdown').classList.toggle('open');
+}
+
+function closeUserDropdown() {
+  document.getElementById('userDropdown')?.classList.remove('open');
+}
+
+document.addEventListener('click', e => {
+  const dd = document.getElementById('userDropdown');
+  const badge = document.querySelector('.user-badge');
+  if (dd?.classList.contains('open') && !badge?.contains(e.target) && !dd.contains(e.target)) {
+    dd.classList.remove('open');
+  }
+});
+
+// ===== PERFIL =====
+function openProfile() {
+  const u = state.currentUser;
+  document.getElementById('pf_nombre').value = u?.nombre || '';
+  document.getElementById('pf_apellido').value = u?.apellido || '';
+  document.getElementById('profileEmail').textContent = u?.email || '';
+  const initial = ((u?.nombre || u?.email || 'U')[0] || 'U').toUpperCase();
+  document.getElementById('profileAvatar').textContent = initial;
+
+  const status = u?.access_status || (u?.activo !== false ? 'active' : 'blocked');
+  const statusMap = {
+    active:  { label: 'Activo',    cls: 'badge-active' },
+    trial:   { label: 'Prueba',    cls: 'badge-rubro' },
+    blocked: { label: 'Bloqueado', cls: 'badge-inactive' },
+    expired: { label: 'Expirado',  cls: 'badge-inactive' },
+  };
+  const s = statusMap[status] || statusMap.active;
+  const badge = document.getElementById('profileAccessBadge');
+  badge.textContent = s.label;
+  badge.className = 'badge ' + s.cls;
+
+  document.getElementById('modalProfile').classList.add('open');
+}
+
+async function saveProfile() {
+  const nombre = document.getElementById('pf_nombre').value.trim();
+  const apellido = document.getElementById('pf_apellido').value.trim();
+
+  if (!nombre) { toast('El nombre es obligatorio', 'error'); return; }
+
+  try {
+    await sbFetch('/usuarios_perfil?id=eq.' + state.currentUser.id, {
+      method: 'PATCH',
+      body: JSON.stringify({ nombre, apellido })
+    });
+    state.currentUser.nombre = nombre;
+    state.currentUser.apellido = apellido;
+    updateUserDisplay();
+    closeModal('modalProfile');
+    toast('Perfil actualizado', 'success');
+  } catch (e) {
+    toast('Error al guardar: ' + e.message, 'error');
+  }
+}
+
+// ===== TABS =====
 function showTab(tab) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
@@ -119,9 +179,9 @@ function showTab(tab) {
   if (tab === 'comisionistas') loadComisionistas();
 }
 
-// ===== ANIMACIÓN DE FONDO (LOGIN) =====
+// ===== ANIMACION DE FONDO (LOGIN) =====
 (function initAuthDeco() {
-  const cheeses = ['🧀', '🥛', '🫙'];
+  const cheeses = ['\uD83E\uDDC0', '\uD83E\uDD5B', '\uD83E\uDED9'];
   const deco    = document.getElementById('authDeco');
   for (let i = 0; i < 8; i++) {
     const el = document.createElement('div');
@@ -147,10 +207,11 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
     closeMobileMenu();
+    closeUserDropdown();
   }
 });
 
-// Recuperar sesión al cargar la página
+// Recuperar sesion al cargar la pagina
 window.addEventListener('load', async () => {
   const token = localStorage.getItem('sb_token');
   const uid   = localStorage.getItem('sb_user_id');
@@ -163,29 +224,30 @@ window.addEventListener('load', async () => {
   }
 });
 
-// El módulo auth.js despacha este evento tras un login exitoso
+// El modulo auth.js despacha este evento tras un login exitoso
 document.addEventListener('userReady', initApp);
 
 // ===== EXPONER AL SCOPE GLOBAL =====
 Object.assign(window, {
   // Auth
   doLogin, doLogout,
-  // Navegación
+  // Navegacion
   showTab, toggleMobileMenu, closeMobileMenu, closeModal,
   // Launcher
   openModule, switchModule, goHome, showLauncher,
+  // User dropdown & perfil
+  toggleUserDropdown, closeUserDropdown, openProfile, saveProfile,
   // Proveedores
   renderProveedores, openProvModal, addContactRow, removeContactRow,
   saveProveedor, deleteProveedor, openDetail, openRotuloFromDetail, exportExcel,
   // Comisionistas
   renderComisionistas, openComModal, saveComisionista, deleteCom, openDetailCom, exportExcelCom,
-  // Admin — usuarios
+  // Admin
   loadUsers, openUserModal, saveUser, toggleUserActivo,
-  // Admin — campos custom
   addCampoCustomRow, removeCampoCustomRow, saveCamposCustom,
   // Config
   saveConfig, handleLogoUpload,
-  // Rótulo
+  // Rotulo
   openRotulo, selectSize, selectDesignSize, updateAdminPreview,
   saveRotuloDesignFromAdmin, resetRotuloDesign, onCustomSizeInput,
   renderRotuloPreview, generatePDF, previewPDF, openModalRotuloDesign, toggleRotuloCampo,
