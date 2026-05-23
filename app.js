@@ -9,6 +9,8 @@ let currentUser = null;
 let isAdmin = false;
 let proveedores = [];
 let contactos = [];
+let comisionistas = [];
+let camposCustom = [];
 let configData = {};
 let logoBase64 = '';
 let currentProvId = null;
@@ -16,6 +18,7 @@ let rotuloProvId = null;
 let editingUserId = null;
 let selectedSize = 'a4';
 let editingProvId = null;
+let editingComId = null;
 
 // ===== FLOATING CHEESE DECO =====
 const cheeses = ['🧀','🥛','🫙'];
@@ -133,7 +136,6 @@ async function initApp() {
   await loadProveedores();
 }
 
-// Check existing session on load
 window.addEventListener('load', async () => {
   const token = localStorage.getItem('sb_token');
   const uid = localStorage.getItem('sb_user_id');
@@ -142,13 +144,10 @@ window.addEventListener('load', async () => {
     try {
       await loadUserProfile(uid, email);
       await initApp();
-    } catch {
-      // session expired, show login
-    }
+    } catch {}
   }
 });
 
-// Enter key on login
 document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 document.getElementById('loginEmail').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
@@ -166,14 +165,13 @@ async function loadConfig() {
 function applyConfig() {
   const nombre = configData.empresa_nombre || 'Cremac';
   document.getElementById('headerName').textContent = nombre;
-  document.title = `Directorio de Proveedores — ${nombre}`;
+  document.title = `Directorio — ${nombre}`;
 
   if (configData.logo_base64) {
     logoBase64 = configData.logo_base64;
     setLogoSrc(logoBase64);
   }
 
-  // Fill admin form
   ['nombre','direccion','telefono','email'].forEach(k => {
     const el = document.getElementById(`cfg_${k}`);
     if (el) el.value = configData[`empresa_${k}`] || '';
@@ -181,6 +179,8 @@ function applyConfig() {
   const pieEl = document.getElementById('cfg_pie');
   if (pieEl) pieEl.value = configData.rotulo_pie || '';
 
+  camposCustom = configData.comisionistas_campos_custom || [];
+  renderCamposCustomAdmin();
   renderRotuloToggles();
 }
 
@@ -214,10 +214,7 @@ async function saveConfig() {
   };
 
   try {
-    await sbFetch('/configuracion?id=eq.1', {
-      method: 'PATCH',
-      body: JSON.stringify(body)
-    });
+    await sbFetch('/configuracion?id=eq.1', { method: 'PATCH', body: JSON.stringify(body) });
     configData = { ...configData, ...body };
     applyConfig();
     toast('Configuración guardada', 'success');
@@ -240,8 +237,7 @@ function renderRotuloToggles() {
 }
 
 function toggleRotuloCampo(k) {
-  const toggle = document.getElementById(`toggle_${k}`);
-  toggle.classList.toggle('on');
+  document.getElementById(`toggle_${k}`)?.classList.toggle('on');
 }
 
 function getRotuloToggleValues() {
@@ -272,7 +268,7 @@ function renderStats() {
   document.getElementById('statsRow').innerHTML = `
     <div class="stat-card">
       <div class="stat-icon blue">🧀</div>
-      <div><div class="stat-number">${proveedores.length}</div><div class="stat-label">Total proveedores</div></div>
+      <div><div class="stat-number">${proveedores.length}</div><div class="stat-label">Total</div></div>
     </div>
     <div class="stat-card">
       <div class="stat-icon green">✅</div>
@@ -290,7 +286,6 @@ function renderProveedores() {
   const rubro = document.getElementById('filterRubro').value;
   const estado = document.getElementById('filterEstado').value;
 
-  // Update rubro filter
   const rubros = [...new Set(proveedores.map(p=>p.rubro).filter(Boolean))].sort();
   const sel = document.getElementById('filterRubro');
   const cur = sel.value;
@@ -306,17 +301,16 @@ function renderProveedores() {
   const tbody = document.getElementById('provTableBody');
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🧀</div><h3>${proveedores.length===0?'Sin proveedores aún':'Sin resultados'}</h3><p>${proveedores.length===0?'Agregá el primer proveedor.':'Probá con otro filtro.'}</p></div></td></tr>`;
+    const msg = `<div class="empty-state"><div class="empty-icon">🧀</div><h3>${proveedores.length===0?'Sin proveedores aún':'Sin resultados'}</h3><p>${proveedores.length===0?'Agregá el primer proveedor.':'Probá con otro filtro.'}</p></div>`;
+    tbody.innerHTML = `<tr><td colspan="7">${msg}</td></tr>`;
     const cards = document.getElementById('provCards');
-    if (cards) cards.innerHTML = `<div class="empty-state"><div class="empty-icon">🧀</div><h3>${proveedores.length===0?'Sin proveedores aún':'Sin resultados'}</h3><p>${proveedores.length===0?'Agregá el primer proveedor.':'Probá con otro filtro.'}</p></div>`;
+    if (cards) cards.innerHTML = msg;
     return;
   }
 
-  // TABLE rows
   tbody.innerHTML = filtered.map(p => {
     const pContacts = contactos.filter(c => c.proveedor_id === p.id);
     const fecha = p.updated_at ? new Date(p.updated_at).toLocaleDateString('es-AR') : '—';
-    const modPor = p.modificado_por || '—';
     return `
       <tr>
         <td>
@@ -325,35 +319,20 @@ function renderProveedores() {
         </td>
         <td>${p.rubro ? `<span class="badge badge-rubro">${esc(p.rubro)}</span>` : '—'}</td>
         <td>${[p.localidad, p.provincia].filter(Boolean).map(esc).join(', ') || '—'}</td>
-        <td>
-          ${pContacts.length === 0 ? '<span style="color:var(--text-muted);font-size:12px">Sin contactos</span>' :
-            pContacts.map(c => `<span class="contact-chip">👤 ${esc(c.nombre)}${c.cargo?` · ${esc(c.cargo)}`:''}</span>`).join('')}
-        </td>
+        <td>${pContacts.length === 0 ? '<span style="color:var(--text-muted);font-size:12px">Sin contactos</span>' : pContacts.map(c => `<span class="contact-chip">👤 ${esc(c.nombre)}${c.cargo?` · ${esc(c.cargo)}`:''}</span>`).join('')}</td>
         <td><span class="badge ${p.activo ? 'badge-active' : 'badge-inactive'}">${p.activo ? '● Activo' : '○ Inactivo'}</span></td>
-        <td>
-          <div style="font-size:12px">${fecha}</div>
-          <div class="meta-info">por ${esc(modPor)}</div>
-        </td>
+        <td><div style="font-size:12px">${fecha}</div><div class="meta-info">por ${esc(p.modificado_por||'—')}</div></td>
         <td>
           <div class="td-actions">
-            <button class="btn btn-ghost btn-sm btn-icon" title="Ver detalle" onclick="openDetail('${p.id}')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-            <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openProvModal('${p.id}')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
-            <button class="btn btn-ghost btn-sm btn-icon" title="Rótulo" onclick="openRotulo('${p.id}')">
-              🏷️
-            </button>
-            <button class="btn btn-danger-ghost btn-sm btn-icon" title="Eliminar" onclick="deleteProveedor('${p.id}')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-            </button>
+            <button class="btn btn-ghost btn-sm btn-icon" title="Ver" onclick="openDetail('${p.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openProvModal('${p.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <button class="btn btn-ghost btn-sm btn-icon" title="Rótulo" onclick="openRotulo('${p.id}')">🏷️</button>
+            <button class="btn btn-danger-ghost btn-sm btn-icon" title="Eliminar" onclick="deleteProveedor('${p.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
           </div>
         </td>
       </tr>`;
   }).join('');
 
-  // MOBILE CARDS
   const cards = document.getElementById('provCards');
   if (cards) {
     cards.innerHTML = filtered.map(p => {
@@ -376,7 +355,7 @@ function renderProveedores() {
           <div class="prov-card-actions">
             <button class="btn btn-ghost btn-sm" onclick="openDetail('${p.id}')">👁 Ver</button>
             <button class="btn btn-ghost btn-sm" onclick="openProvModal('${p.id}')">✏️ Editar</button>
-            <button class="btn btn-ghost btn-sm" onclick="openRotulo('${p.id}')">🏷️ Rótulo</button>
+            <button class="btn btn-ghost btn-sm" onclick="openRotulo('${p.id}')">🏷️</button>
             <button class="btn btn-danger-ghost btn-sm" onclick="deleteProveedor('${p.id}')">🗑</button>
           </div>
         </div>`;
@@ -402,8 +381,7 @@ function openProvModal(id = null) {
       if (!el) return;
       el.value = f === 'activo' ? String(p[f] !== false) : (p[f] || '');
     });
-    const pContacts = contactos.filter(c => c.proveedor_id === id);
-    pContacts.forEach(c => addContactRow(c));
+    contactos.filter(c => c.proveedor_id === id).forEach(c => addContactRow(c));
   } else {
     document.getElementById('modalProvTitle').textContent = 'Nuevo Proveedor';
     fields.forEach(f => {
@@ -425,26 +403,11 @@ function addContactRow(contact = null) {
   row.innerHTML = `
     <button class="btn-remove-contact" onclick="removeContactRow(${id})">✕</button>
     <div class="contact-row-grid">
-      <div class="form-group">
-        <label>Nombre y apellido *</label>
-        <input type="text" id="cn_${id}" value="${esc(contact?.nombre||'')}" placeholder="Juan Pérez">
-      </div>
-      <div class="form-group">
-        <label>Cargo / Rol</label>
-        <input type="text" id="cc_${id}" value="${esc(contact?.cargo||'')}" placeholder="Ventas">
-      </div>
-      <div class="form-group">
-        <label>Teléfono</label>
-        <input type="tel" id="ct_${id}" value="${esc(contact?.telefono||'')}" placeholder="(0000) 000-0000">
-      </div>
-      <div class="form-group">
-        <label>Celular / WhatsApp</label>
-        <input type="tel" id="cw_${id}" value="${esc(contact?.celular||'')}" placeholder="11 5523-0000">
-      </div>
-      <div class="form-group full" style="grid-column:1/-1">
-        <label>Email</label>
-        <input type="email" id="ce_${id}" value="${esc(contact?.email||'')}" placeholder="contacto@proveedor.com">
-      </div>
+      <div class="form-group"><label>Nombre y apellido *</label><input type="text" id="cn_${id}" value="${esc(contact?.nombre||'')}" placeholder="Juan Pérez"></div>
+      <div class="form-group"><label>Cargo / Rol</label><input type="text" id="cc_${id}" value="${esc(contact?.cargo||'')}" placeholder="Ventas"></div>
+      <div class="form-group"><label>Teléfono</label><input type="tel" id="ct_${id}" value="${esc(contact?.telefono||'')}" placeholder="(0000) 000-0000"></div>
+      <div class="form-group"><label>Celular / WhatsApp</label><input type="tel" id="cw_${id}" value="${esc(contact?.celular||'')}" placeholder="11 5523-0000"></div>
+      <div class="form-group full" style="grid-column:1/-1"><label>Email</label><input type="email" id="ce_${id}" value="${esc(contact?.email||'')}" placeholder="contacto@proveedor.com"></div>
     </div>`;
   row.dataset.existingId = contact?.id || '';
   document.getElementById('contactsContainer').appendChild(row);
@@ -466,7 +429,6 @@ async function saveProveedor() {
   if (!nombre) { toast('El nombre es obligatorio', 'error'); return; }
 
   const userNombre = currentUser?.nombre || currentUser?.email || 'Usuario';
-
   const body = {
     nombre,
     rubro: document.getElementById('p_rubro').value.trim(),
@@ -482,7 +444,6 @@ async function saveProveedor() {
     updated_at: new Date().toISOString()
   };
 
-  // Gather contacts
   const rows = document.querySelectorAll('#contactsContainer .contact-row');
   const contactsData = [];
   for (const row of rows) {
@@ -511,7 +472,6 @@ async function saveProveedor() {
       toast('Proveedor agregado', 'success');
     }
 
-    // Sync contacts: delete existing then re-insert
     await sbFetch(`/contactos?proveedor_id=eq.${provId}`, { method: 'DELETE' });
     for (const c of contactsData) {
       const { id: _id, ...cBody } = c;
@@ -537,7 +497,7 @@ async function deleteProveedor(id) {
   }
 }
 
-// ===== DETAIL VIEW =====
+// ===== DETAIL VIEW PROVEEDOR =====
 function openDetail(id) {
   const p = proveedores.find(x => x.id === id);
   if (!p) return;
@@ -588,34 +548,358 @@ function openRotuloFromDetail() {
   openRotulo(currentProvId);
 }
 
-// ===== RÓTULO =====
+// ===== COMISIONISTAS =====
+async function loadComisionistas() {
+  try {
+    comisionistas = await sbFetch('/comisionistas?select=*&order=nombre.asc');
+  } catch {
+    comisionistas = [];
+  }
+  renderStatsComisionistas();
+  renderComisionistas();
+}
 
+function renderStatsComisionistas() {
+  const activos = comisionistas.filter(c => c.activo).length;
+  const zonas = new Set(comisionistas.map(c => c.zona).filter(Boolean)).size;
+  document.getElementById('statsRowCom').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-icon blue">🤝</div>
+      <div><div class="stat-number">${comisionistas.length}</div><div class="stat-label">Total</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">✅</div>
+      <div><div class="stat-number">${activos}</div><div class="stat-label">Activos</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon red">📍</div>
+      <div><div class="stat-number">${zonas}</div><div class="stat-label">Zonas</div></div>
+    </div>
+  `;
+}
+
+function renderComisionistas() {
+  const q = document.getElementById('searchCom').value.toLowerCase();
+  const zona = document.getElementById('filterZona').value;
+  const estado = document.getElementById('filterEstadoCom').value;
+
+  const zonas = [...new Set(comisionistas.map(c => c.zona).filter(Boolean))].sort();
+  const sel = document.getElementById('filterZona');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todas las zonas</option>' + zonas.map(z => `<option value="${z}" ${z===cur?'selected':''}>${z}</option>`).join('');
+
+  let filtered = comisionistas.filter(c => {
+    const matchQ = !q || [c.nombre, c.zona, c.localidad, c.provincia, c.empresa, c.email].some(v => v && v.toLowerCase().includes(q));
+    const matchZ = !zona || c.zona === zona;
+    const matchE = !estado || (estado === 'activo' ? c.activo : !c.activo);
+    return matchQ && matchZ && matchE;
+  });
+
+  const tbody = document.getElementById('comTableBody');
+  const emptyMsg = `<div class="empty-state"><div class="empty-icon">🤝</div><h3>${comisionistas.length===0?'Sin comisionistas aún':'Sin resultados'}</h3><p>${comisionistas.length===0?'Agregá el primer comisionista.':'Probá con otro filtro.'}</p></div>`;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7">${emptyMsg}</td></tr>`;
+    const cards = document.getElementById('comCards');
+    if (cards) cards.innerHTML = emptyMsg;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(c => {
+    const fecha = c.updated_at ? new Date(c.updated_at).toLocaleDateString('es-AR') : '—';
+    return `
+      <tr>
+        <td>
+          <div class="provider-name">${esc(c.nombre)}</div>
+          ${c.empresa ? `<div style="font-size:11px;color:var(--text-muted)">${esc(c.empresa)}</div>` : ''}
+        </td>
+        <td>${c.zona ? `<span class="badge badge-rubro">${esc(c.zona)}</span>` : '—'}</td>
+        <td>${[c.localidad, c.provincia].filter(Boolean).map(esc).join(', ') || '—'}</td>
+        <td>
+          ${c.telefono ? `<div style="font-size:12px">📞 ${esc(c.telefono)}</div>` : ''}
+          ${c.celular ? `<div style="font-size:12px">📱 ${esc(c.celular)}</div>` : ''}
+          ${!c.telefono && !c.celular ? '<span style="color:var(--text-muted);font-size:12px">—</span>' : ''}
+        </td>
+        <td><span class="badge ${c.activo ? 'badge-active' : 'badge-inactive'}">${c.activo ? '● Activo' : '○ Inactivo'}</span></td>
+        <td><div style="font-size:12px">${fecha}</div><div class="meta-info">por ${esc(c.modificado_por||'—')}</div></td>
+        <td>
+          <div class="td-actions">
+            <button class="btn btn-ghost btn-sm btn-icon" title="Ver" onclick="openDetailCom('${c.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openComModal('${c.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <button class="btn btn-danger-ghost btn-sm btn-icon" title="Eliminar" onclick="deleteCom('${c.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const cards = document.getElementById('comCards');
+  if (cards) {
+    cards.innerHTML = filtered.map(c => `
+      <div class="prov-card">
+        <div class="prov-card-header">
+          <div>
+            <div class="prov-card-name">${esc(c.nombre)}</div>
+            ${c.zona ? `<span class="badge badge-rubro" style="margin-top:4px;display:inline-flex">${esc(c.zona)}</span>` : ''}
+          </div>
+          <span class="badge ${c.activo ? 'badge-active' : 'badge-inactive'}">${c.activo ? '● Activo' : '○ Inactivo'}</span>
+        </div>
+        <div class="prov-card-body">
+          ${c.empresa ? `<div class="prov-card-row">🏢 ${esc(c.empresa)}</div>` : ''}
+          ${[c.localidad, c.provincia].filter(Boolean).length ? `<div class="prov-card-row">📍 ${[c.localidad,c.provincia].filter(Boolean).map(esc).join(', ')}</div>` : ''}
+          ${c.telefono ? `<div class="prov-card-row">📞 ${esc(c.telefono)}</div>` : ''}
+          ${c.celular ? `<div class="prov-card-row">📱 ${esc(c.celular)}</div>` : ''}
+        </div>
+        <div class="prov-card-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openDetailCom('${c.id}')">👁 Ver</button>
+          <button class="btn btn-ghost btn-sm" onclick="openComModal('${c.id}')">✏️ Editar</button>
+          <button class="btn btn-danger-ghost btn-sm" onclick="deleteCom('${c.id}')">🗑</button>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function openComModal(id = null) {
+  editingComId = id;
+  const fields = ['nombre','zona','empresa','telefono','celular','email','localidad','provincia','notas','activo'];
+
+  if (id) {
+    const c = comisionistas.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('modalComTitle').textContent = 'Editar Comisionista';
+    fields.forEach(f => {
+      const el = document.getElementById('com_' + f);
+      if (!el) return;
+      el.value = f === 'activo' ? String(c[f] !== false) : (c[f] || '');
+    });
+    renderCamposCustomInForm(c.campos_extra || {});
+  } else {
+    document.getElementById('modalComTitle').textContent = 'Nuevo Comisionista';
+    fields.forEach(f => {
+      const el = document.getElementById('com_' + f);
+      if (el) el.value = f === 'activo' ? 'true' : '';
+    });
+    renderCamposCustomInForm({});
+  }
+
+  document.getElementById('modalCom').classList.add('open');
+}
+
+function renderCamposCustomInForm(extraData = {}) {
+  const grid = document.getElementById('comFormGrid');
+  grid.querySelectorAll('.campo-custom-dinamico').forEach(el => el.remove());
+  if (!camposCustom.length) return;
+
+  camposCustom.forEach(campo => {
+    const val = extraData[campo.id] || '';
+    const div = document.createElement('div');
+    div.className = 'form-group full campo-custom-dinamico';
+    const inputHtml = campo.tipo === 'textarea'
+      ? `<textarea id="cex_${campo.id}" placeholder="${esc(campo.label)}">${esc(val)}</textarea>`
+      : `<input type="${campo.tipo}" id="cex_${campo.id}" value="${esc(val)}" placeholder="${esc(campo.label)}">`;
+    div.innerHTML = `<label>${esc(campo.label)}</label>${inputHtml}`;
+    grid.appendChild(div);
+  });
+}
+
+async function saveComisionista() {
+  const nombre = document.getElementById('com_nombre').value.trim();
+  if (!nombre) { toast('El nombre es obligatorio', 'error'); return; }
+
+  const userNombre = currentUser?.nombre || currentUser?.email || 'Usuario';
+  const campos_extra = {};
+  camposCustom.forEach(campo => {
+    const el = document.getElementById(`cex_${campo.id}`);
+    if (el) campos_extra[campo.id] = el.value.trim();
+  });
+
+  const body = {
+    nombre,
+    zona: document.getElementById('com_zona').value.trim(),
+    empresa: document.getElementById('com_empresa').value.trim(),
+    telefono: document.getElementById('com_telefono').value.trim(),
+    celular: document.getElementById('com_celular').value.trim(),
+    email: document.getElementById('com_email').value.trim(),
+    localidad: document.getElementById('com_localidad').value.trim(),
+    provincia: document.getElementById('com_provincia').value.trim(),
+    notas: document.getElementById('com_notas').value.trim(),
+    activo: document.getElementById('com_activo').value === 'true',
+    campos_extra,
+    modificado_por: userNombre,
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    if (editingComId) {
+      await sbFetch(`/comisionistas?id=eq.${editingComId}`, { method: 'PATCH', body: JSON.stringify(body) });
+      toast('Comisionista actualizado', 'success');
+    } else {
+      await sbFetch('/comisionistas', { method: 'POST', body: JSON.stringify(body) });
+      toast('Comisionista agregado', 'success');
+    }
+    closeModal('modalCom');
+    await loadComisionistas();
+  } catch(e) {
+    toast('Error al guardar: ' + e.message, 'error');
+  }
+}
+
+async function deleteCom(id) {
+  const c = comisionistas.find(x => x.id === id);
+  if (!confirm(`¿Eliminar a "${c?.nombre}"? Esta acción no se puede deshacer.`)) return;
+  try {
+    await sbFetch(`/comisionistas?id=eq.${id}`, { method: 'DELETE' });
+    toast('Comisionista eliminado', 'error');
+    await loadComisionistas();
+  } catch {
+    toast('Error al eliminar', 'error');
+  }
+}
+
+function openDetailCom(id) {
+  const c = comisionistas.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('detailComTitle').textContent = c.nombre;
+  document.getElementById('detailComEditBtn').onclick = () => { closeModal('modalDetailCom'); openComModal(id); };
+
+  const fecha = c.updated_at ? new Date(c.updated_at).toLocaleDateString('es-AR') : '—';
+
+  let camposExtraHtml = '';
+  if (camposCustom.length && c.campos_extra) {
+    const conValor = camposCustom.filter(campo => c.campos_extra[campo.id]);
+    if (conValor.length) {
+      camposExtraHtml = `
+        <div class="divider"></div>
+        <div style="font-weight:700;color:var(--blue);margin-bottom:12px">📋 Información adicional</div>
+        <div class="detail-grid">${conValor.map(campo => field(campo.label, c.campos_extra[campo.id])).join('')}</div>`;
+    }
+  }
+
+  document.getElementById('detailComBody').innerHTML = `
+    <div class="detail-grid">
+      ${field('Zona / Región', c.zona)}
+      ${field('Empresa', c.empresa)}
+      ${field('Localidad', [c.localidad, c.provincia].filter(Boolean).join(', '))}
+      ${field('Teléfono', c.telefono)}
+      ${field('Celular / WhatsApp', c.celular)}
+      ${field('Email', c.email)}
+      ${field('Estado', c.activo ? '✅ Activo' : '⬜ Inactivo')}
+      ${field('Última modificación', fecha + (c.modificado_por ? ` por ${c.modificado_por}` : ''))}
+    </div>
+    ${c.notas ? `<div class="detail-section"><label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted)">Notas</label><p style="margin-top:4px;font-size:14px;color:var(--text-mid)">${esc(c.notas)}</p></div>` : ''}
+    ${camposExtraHtml}
+  `;
+
+  document.getElementById('modalDetailCom').classList.add('open');
+}
+
+function exportExcelCom() {
+  if (comisionistas.length === 0) { toast('Sin datos para exportar', 'error'); return; }
+
+  const rows = comisionistas.map(c => {
+    const base = {
+      'Nombre': c.nombre,
+      'Zona': c.zona || '',
+      'Empresa': c.empresa || '',
+      'Teléfono': c.telefono || '',
+      'Celular': c.celular || '',
+      'Email': c.email || '',
+      'Localidad': c.localidad || '',
+      'Provincia': c.provincia || '',
+      'Estado': c.activo ? 'Activo' : 'Inactivo',
+      'Notas': c.notas || '',
+      'Última modificación': c.updated_at ? new Date(c.updated_at).toLocaleDateString('es-AR') : '',
+      'Modificado por': c.modificado_por || ''
+    };
+    camposCustom.forEach(campo => {
+      base[campo.label] = c.campos_extra?.[campo.id] || '';
+    });
+    return base;
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = Object.keys(rows[0]).map(() => ({ wch: 20 }));
+  XLSX.utils.book_append_sheet(wb, ws, 'Comisionistas');
+  XLSX.writeFile(wb, `comisionistas_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('Excel exportado', 'success');
+}
+
+// ===== CAMPOS CUSTOM ADMIN =====
+function renderCamposCustomAdmin() {
+  const list = document.getElementById('camposCustomList');
+  const noMsg = document.getElementById('noCamposMsg');
+  if (!list) return;
+
+  if (!camposCustom.length) {
+    list.innerHTML = '';
+    if (noMsg) noMsg.style.display = 'block';
+    return;
+  }
+
+  if (noMsg) noMsg.style.display = 'none';
+  list.innerHTML = camposCustom.map((campo, i) => `
+    <div class="campo-custom-row" data-id="${campo.id}">
+      <input type="text" class="cc-label" placeholder="Nombre del campo" value="${esc(campo.label)}">
+      <select class="cc-tipo">
+        <option value="text" ${campo.tipo==='text'?'selected':''}>Texto</option>
+        <option value="tel" ${campo.tipo==='tel'?'selected':''}>Teléfono</option>
+        <option value="number" ${campo.tipo==='number'?'selected':''}>Número</option>
+        <option value="email" ${campo.tipo==='email'?'selected':''}>Email</option>
+        <option value="textarea" ${campo.tipo==='textarea'?'selected':''}>Texto largo</option>
+      </select>
+      <button class="btn-remove-contact" onclick="removeCampoCustomRow(${i})" title="Eliminar campo">✕</button>
+    </div>`).join('');
+}
+
+function addCampoCustomRow() {
+  camposCustom.push({ id: `custom_${Date.now()}`, label: '', tipo: 'text' });
+  renderCamposCustomAdmin();
+  const inputs = document.querySelectorAll('#camposCustomList .cc-label');
+  if (inputs.length) inputs[inputs.length - 1].focus();
+}
+
+function removeCampoCustomRow(idx) {
+  camposCustom.splice(idx, 1);
+  renderCamposCustomAdmin();
+}
+
+async function saveCamposCustom() {
+  const rows = document.querySelectorAll('#camposCustomList .campo-custom-row');
+  const updated = [];
+  rows.forEach(row => {
+    const label = row.querySelector('.cc-label')?.value.trim();
+    const tipo = row.querySelector('.cc-tipo')?.value || 'text';
+    const id = row.dataset.id;
+    if (label) updated.push({ id, label, tipo });
+  });
+
+  try {
+    await sbFetch('/configuracion?id=eq.1', {
+      method: 'PATCH',
+      body: JSON.stringify({ comisionistas_campos_custom: updated })
+    });
+    camposCustom = updated;
+    configData.comisionistas_campos_custom = updated;
+    renderCamposCustomAdmin();
+    toast('Campos guardados', 'success');
+  } catch {
+    toast('Error al guardar campos', 'error');
+  }
+}
+
+// ===== RÓTULO =====
 const DEFAULT_DESIGN = {
-  headerBg: '#1a3a6b',
-  barColor: '#c8222a',
-  barHeight: 4,
-  titleColor: '#1a3a6b',
-  textColor: '#333333',
-  bodyBg: '#ffffff',
-  logoSize: 40,
-  logoPos: 'left',
-  empresaFont: 'Arial,sans-serif',
-  empresaSize: 14,
-  empresaPos: 'left',
-  provFont: 'Arial,sans-serif',
-  provSize: 18,
-  provAlign: 'left',
-  empresaColor: '#ffffff',
-  marcoColor: '#1a3a6b',
-  marcoWidth: 1,
+  headerBg: '#1a3a6b', barColor: '#c8222a', barHeight: 4, titleColor: '#1a3a6b',
+  textColor: '#333333', bodyBg: '#ffffff', logoSize: 40, logoPos: 'left',
+  empresaFont: 'Arial,sans-serif', empresaSize: 14, empresaPos: 'left',
+  provFont: 'Arial,sans-serif', provSize: 18, provAlign: 'left',
+  empresaColor: '#ffffff', marcoColor: '#1a3a6b', marcoWidth: 1,
 };
 
-// Get current design: from configData if saved, else default
 function getCurrentDesign() {
   return Object.assign({}, DEFAULT_DESIGN, configData.rotulo_design || {});
 }
 
-// Get design from admin panel controls
 function getRD() {
   const g = id => { const el = document.getElementById(id); return el ? el.value : null; };
   return {
@@ -639,14 +923,14 @@ function getRD() {
   };
 }
 
-// Load design values into admin panel controls
 function loadDesignIntoControls(rd) {
   const map = {
     headerBg:'rc_headerBg', barColor:'rc_barColor', titleColor:'rc_titleColor',
     textColor:'rc_textColor', bodyBg:'rc_bodyBg', logoPos:'rc_logoPos',
     empresaFont:'rc_empresaFont', empresaPos:'rc_empresaPos',
     provFont:'rc_provFont', provAlign:'rc_provAlign',
-    logoSize:'rc_logoSize', empresaSize:'rc_empresaSize', provSize:'rc_provSize', empresaColor:'rc_empresaColor', marcoWidth:'rc_marcoWidth', marcoColor:'rc_marcoColor',
+    logoSize:'rc_logoSize', empresaSize:'rc_empresaSize', provSize:'rc_provSize',
+    empresaColor:'rc_empresaColor', marcoWidth:'rc_marcoWidth', marcoColor:'rc_marcoColor',
     barHeight:'rc_barHeight'
   };
   Object.keys(map).forEach(k => {
@@ -659,10 +943,7 @@ function loadDesignIntoControls(rd) {
   });
 }
 
-// Called when admin panel tab is opened - load current design into controls
-function initAdminRotuloPanel() {
-  // design editor now opens in its own modal
-}
+function initAdminRotuloPanel() {}
 
 function openModalRotuloDesign() {
   loadDesignIntoControls(getCurrentDesign());
@@ -687,16 +968,13 @@ function selectDesignSize(btn, name) {
   document.querySelectorAll('#modalRotuloDesign .size-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   selectedDesignSize = name;
-  const w = btn.dataset.w;
-  const h = btn.dataset.h;
   const wEl = document.getElementById('design_w');
   const hEl = document.getElementById('design_h');
-  if (wEl) wEl.value = w;
-  if (hEl) hEl.value = h;
+  if (wEl) wEl.value = btn.dataset.w;
+  if (hEl) hEl.value = btn.dataset.h;
   updateAdminPreview();
 }
 
-// Update preview in admin design modal
 function updateAdminPreview() {
   const rd = getRD();
   const mockProv = { nombre: 'Nombre del Proveedor SA', rubro: 'Ejemplo de rubro', direccion: 'Calle Ejemplo 1234', localidad: 'Córdoba', provincia: 'Córdoba', codigo_postal: '5000', horario: 'Lun-Vie 8 a 17hs' };
@@ -711,18 +989,10 @@ function updateAdminPreview() {
     wrap.style.aspectRatio = String(ratio);
     wrap.style.display = 'flex';
     wrap.style.alignItems = 'stretch';
-    if (ratio < 1) {
-      wrap.style.maxWidth = '320px';
-      wrap.style.margin = '0 auto';
-    } else {
-      wrap.style.maxWidth = '100%';
-      wrap.style.margin = '0';
-    }
+    if (ratio < 1) { wrap.style.maxWidth = '320px'; wrap.style.margin = '0 auto'; }
+    else { wrap.style.maxWidth = '100%'; wrap.style.margin = '0'; }
     const inner = document.getElementById('adminRotuloPreview');
-    if (inner) {
-      inner.style.flex = '1';
-      inner.style.overflow = 'hidden';
-    }
+    if (inner) { inner.style.flex = '1'; inner.style.overflow = 'hidden'; }
   }
   if (label) label.textContent = `${dw/10} × ${dh/10} cm`;
 }
@@ -746,16 +1016,14 @@ async function saveRotuloDesignFromAdmin() {
 }
 
 async function resetRotuloDesign() {
-  if (!confirm('¿Restablecer el diseño original? Se perderá la configuración actual.')) return;
+  if (!confirm('¿Restablecer el diseño original?')) return;
   try {
-    await sbFetch('/configuracion?id=eq.1', {
-      method: 'PATCH',
-      body: JSON.stringify({ rotulo_design: DEFAULT_DESIGN })
-    });
+    await sbFetch('/configuracion?id=eq.1', { method: 'PATCH', body: JSON.stringify({ rotulo_design: DEFAULT_DESIGN }) });
     configData.rotulo_design = { ...DEFAULT_DESIGN };
     loadDesignIntoControls(DEFAULT_DESIGN);
     updateAdminPreview();
-    toast('Diseño restablecido', 'success');  } catch {
+    toast('Diseño restablecido', 'success');
+  } catch {
     toast('Error al restablecer', 'error');
   }
 }
@@ -763,7 +1031,7 @@ async function resetRotuloDesign() {
 function getRotuloWH() {
   const w = parseFloat(document.getElementById('rotulo_w')?.value) || 21;
   const h = parseFloat(document.getElementById('rotulo_h')?.value) || 29.7;
-  return [w * 10, h * 10]; // convert cm to mm
+  return [w * 10, h * 10];
 }
 
 function getDesignWH() {
@@ -773,7 +1041,6 @@ function getDesignWH() {
 }
 
 function onCustomSizeInput(ctx) {
-  // Deactivate preset buttons
   const modal = ctx === 'design' ? '#modalRotuloDesign' : '#modalRotulo';
   document.querySelectorAll(modal + ' .size-btn').forEach(b => b.classList.remove('active'));
   if (ctx === 'design') updateAdminPreview();
@@ -784,7 +1051,6 @@ function openRotulo(id) {
   rotuloProvId = id;
   document.getElementById('rotuloDetalle').value = '';
   document.getElementById('rotuloExtra').value = '';
-  // Reset to A4
   document.querySelectorAll('#modalRotulo .size-btn').forEach(b => b.classList.remove('active'));
   const a4btn = document.querySelector('#modalRotulo .size-btn');
   if (a4btn) a4btn.classList.add('active');
@@ -799,16 +1065,13 @@ function openRotulo(id) {
 function selectSize(btn, name) {
   document.querySelectorAll('#modalRotulo .size-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const w = btn.dataset.w;
-  const h = btn.dataset.h;
   const wEl = document.getElementById('rotulo_w');
   const hEl = document.getElementById('rotulo_h');
-  if (wEl) wEl.value = w;
-  if (hEl) hEl.value = h;
+  if (wEl) wEl.value = btn.dataset.w;
+  if (hEl) hEl.value = btn.dataset.h;
   renderRotuloPreview();
 }
 
-// Shared render function - renders into any element with any design and any provider data
 function renderRotuloPreviewTo(targetId, rd, pData, pContactsData, detalleText, extraText) {
   const el = document.getElementById(targetId);
   if (!el) return;
@@ -825,19 +1088,13 @@ function renderRotuloPreviewTo(targetId, rd, pData, pContactsData, detalleText, 
   const nameHtml = rd.empresaPos !== 'hidden' ? `<div style="font-family:${rd.empresaFont};font-size:${rd.empresaSize}px;font-weight:bold;color:${rd.empresaColor||'#ffffff'};${rd.empresaPos==='right'?'margin-left:auto':''}">${esc(empresa)}</div>` : '';
 
   let headerContent = '';
-  if (rd.logoPos === 'center') {
-    headerContent = `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:100%">${logoHtml}${nameHtml}</div>`;
-  } else if (rd.logoPos === 'right') {
-    headerContent = `<div style="display:flex;align-items:center;width:100%;justify-content:space-between">${nameHtml}${logoHtml}</div>`;
-  } else {
-    headerContent = `<div style="display:flex;align-items:center;gap:12px;width:100%">${logoHtml}${nameHtml}</div>`;
-  }
+  if (rd.logoPos === 'center') headerContent = `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:100%">${logoHtml}${nameHtml}</div>`;
+  else if (rd.logoPos === 'right') headerContent = `<div style="display:flex;align-items:center;width:100%;justify-content:space-between">${nameHtml}${logoHtml}</div>`;
+  else headerContent = `<div style="display:flex;align-items:center;gap:12px;width:100%">${logoHtml}${nameHtml}</div>`;
 
   el.innerHTML = `
     <div style="border:${rd.marcoWidth>0?rd.marcoWidth+'px solid '+rd.marcoColor:'none'};border-radius:8px;overflow:hidden;background:${rd.bodyBg};font-family:Arial,sans-serif">
-      <div style="background:${rd.headerBg};padding:10px 14px;display:flex;align-items:center">
-        ${headerContent}
-      </div>
+      <div style="background:${rd.headerBg};padding:10px 14px;display:flex;align-items:center">${headerContent}</div>
       ${rd.barHeight > 0 ? `<div style="height:${rd.barHeight}px;background:${rd.barColor}"></div>` : ''}
       <div style="padding:14px">
         <div style="font-family:${rd.provFont};font-size:${rd.provSize}px;font-weight:bold;color:${rd.titleColor};text-align:${rd.provAlign};margin-bottom:10px">${esc(pData.nombre||'')}</div>
@@ -845,7 +1102,7 @@ function renderRotuloPreviewTo(targetId, rd, pData, pContactsData, detalleText, 
         ${campos.direccion && pData.direccion ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Dirección:</strong> ${esc([pData.direccion,pData.localidad,pData.provincia,pData.codigo_postal?'CP '+pData.codigo_postal:''].filter(Boolean).join(', '))}</div>` : ''}
         ${campos.horario && pData.horario ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Horario:</strong> ${esc(pData.horario)}</div>` : ''}
         ${contact && campos.telefono && (contact.telefono||contact.celular) ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Contacto:</strong> ${esc(contact.nombre)}${contact.cargo?' ('+esc(contact.cargo)+')':''}${contact.telefono?' — '+esc(contact.telefono):''}${contact.celular?' / '+esc(contact.celular):''}</div>` : ''}
-        ${extra ? `<div style="font-size:12px;font-weight:bold;color:${rd.barColor};margin-bottom:4px;white-space:pre-wrap">⚠ ${esc(extra)}</div>` : ''}
+        ${extra ? `<div style="font-size:12px;font-weight:bold;color:${rd.barColor};margin-bottom:4px">⚠ ${esc(extra)}</div>` : ''}
         ${detalle ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #ddd"><div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:bold;margin-bottom:3px">Detalle</div><div style="font-size:12px;color:${rd.textColor};white-space:pre-wrap">${esc(detalle)}</div></div>` : ''}
       </div>
       <div style="background:#f7f9fc;border-top:1px solid #ddd;padding:6px 14px;display:flex;justify-content:space-between;font-size:10px;color:#999">
@@ -860,22 +1117,17 @@ function renderRotuloPreview() {
   if (!p) return;
   const rd = getCurrentDesign();
   const pContacts = contactos.filter(c => c.proveedor_id === p.id);
-  const detalle = document.getElementById('rotuloDetalle').value;
-  const extra = document.getElementById('rotuloExtra').value;
-  renderRotuloPreviewTo('rotuloPreview', rd, p, pContacts, detalle, extra);
+  renderRotuloPreviewTo('rotuloPreview', rd, p, pContacts, document.getElementById('rotuloDetalle').value, document.getElementById('rotuloExtra').value);
 }
 
 async function generatePDF() {
   const p = proveedores.find(x => x.id === rotuloProvId);
   if (!p) return;
-
   const { jsPDF } = window.jspdf;
   const rd = getCurrentDesign();
-
   const [w, h] = getRotuloWH();
   const isSmall = w <= 110 && h <= 80;
   const doc = new jsPDF({ orientation: w > h ? 'landscape' : 'portrait', unit: 'mm', format: [w, h] });
-
   const pContacts = contactos.filter(c => c.proveedor_id === p.id);
   const campos = configData.rotulo_campos || { horario: true, direccion: true, telefono: true };
   const detalle = document.getElementById('rotuloDetalle').value;
@@ -887,129 +1139,29 @@ async function generatePDF() {
   const contact = pContacts[0];
   const margin = isSmall ? 4 : 12;
   const contentW = w - margin * 2;
-
-  // Parse hex color to RGB
-  const hexRgb = hex => {
-    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-    return [r,g,b];
-  };
-
+  const hexRgb = hex => [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
   let y = 0;
   const headerH = isSmall ? 12 : 18;
-
-  // Header
   const [hr,hg,hb] = hexRgb(rd.headerBg);
-  doc.setFillColor(hr,hg,hb);
-  doc.rect(0, 0, w, headerH, 'F');
-
-  // Logo in PDF
-  if (logo) {
-    try {
-      const imgH = isSmall ? 8 : rd.logoSize/4;
-      const imgW = imgH * 2;
-      let logoX = margin;
-      if (rd.logoPos === 'center') logoX = (w - imgW) / 2;
-      if (rd.logoPos === 'right') logoX = w - margin - imgW;
-      doc.addImage(logo, 'PNG', logoX, isSmall ? 2 : (headerH-imgH)/2, imgW, imgH);
-    } catch {}
-  }
-
-  // Company name in header
-  if (rd.empresaPos !== 'hidden') {
-    doc.setTextColor(255,255,255);
-    doc.setFontSize(isSmall ? 7 : rd.empresaSize * 0.75);
-    doc.setFont('helvetica','bold');
-    const nameX = rd.empresaPos === 'center' ? w/2 : (rd.empresaPos === 'right' ? w-margin : (logo ? margin + (isSmall?16:rd.logoSize/2+4) : margin));
-    const align = rd.empresaPos === 'center' ? 'center' : (rd.empresaPos === 'right' ? 'right' : 'left');
-    doc.text(empresa, nameX, headerH/2+2, { align });
-  }
-
-  // Colored bar
-  if (rd.barHeight > 0) {
-    const [br,bg,bb] = hexRgb(rd.barColor);
-    doc.setFillColor(br,bg,bb);
-    doc.rect(0, headerH, w, isSmall ? 1.5 : rd.barHeight * 0.4, 'F');
-    y = headerH + (isSmall ? 1.5 : rd.barHeight * 0.4);
-  } else {
-    y = headerH;
-  }
-
-  y += isSmall ? 4 : 8;
-
-  // Provider name
-  const [tr,tg,tb] = hexRgb(rd.titleColor);
-  doc.setTextColor(tr,tg,tb);
-  doc.setFontSize(isSmall ? 9 : rd.provSize * 0.7);
-  doc.setFont('helvetica','bold');
-  const provX = rd.provAlign === 'center' ? w/2 : (rd.provAlign === 'right' ? w-margin : margin);
-  doc.text(p.nombre, provX, y, { align: rd.provAlign });
-  y += isSmall ? 5 : 8;
-
-  const lineH = isSmall ? 4 : 6;
-  const [txr,txg,txb] = hexRgb(rd.textColor);
-  doc.setFontSize(isSmall ? 7 : 10);
-
-  const addLine = (label, value) => {
-    if (!value) return;
-    doc.setTextColor(100,100,100);
-    doc.setFont('helvetica','bold');
-    doc.text(label+':', margin, y);
-    doc.setFont('helvetica','normal');
-    doc.setTextColor(txr,txg,txb);
-    const lines = doc.splitTextToSize(value, contentW - 25);
-    doc.text(lines, margin+22, y);
-    y += lineH * lines.length;
-  };
-
-  if (campos.rubro && p.rubro) addLine('Rubro', p.rubro);
-  if (campos.direccion && p.direccion) addLine('Dirección', [p.direccion,p.localidad,p.provincia,p.codigo_postal?'CP '+p.codigo_postal:''].filter(Boolean).join(', '));
-  if (campos.horario && p.horario) addLine('Horario', p.horario);
-  if (contact && campos.telefono && (contact.telefono||contact.celular)) {
-    addLine('Contacto', `${contact.nombre}${contact.cargo?' ('+contact.cargo+')':''}${contact.telefono?' — '+contact.telefono:''}${contact.celular?' / '+contact.celular:''}`);
-  }
-  if (extra) {
-    const [br,bg,bb] = hexRgb(rd.barColor);
-    doc.setTextColor(br,bg,bb);
-    doc.setFont('helvetica','bold');
-    doc.text('! '+extra, margin, y);
-    y += lineH;
-  }
-  if (detalle) {
-    y += 3;
-    doc.setDrawColor(200,200,200);
-    doc.line(margin, y, w-margin, y);
-    y += 4;
-    doc.setTextColor(120,120,120);
-    doc.setFontSize(isSmall ? 6 : 8);
-    doc.setFont('helvetica','bold');
-    doc.text('DETALLE:', margin, y);
-    y += lineH-1;
-    doc.setFont('helvetica','normal');
-    doc.setTextColor(txr,txg,txb);
-    doc.setFontSize(isSmall ? 7 : 10);
-    const lines = doc.splitTextToSize(detalle, contentW);
-    doc.text(lines, margin, y);
-  }
-
-  // Footer
-  const footerH = isSmall ? 7 : 10;
-  doc.setFillColor(247,249,252);
-  doc.rect(0, h-footerH, w, footerH, 'F');
-  doc.setDrawColor(221,227,236);
-  doc.line(0, h-footerH, w, h-footerH);
-  doc.setTextColor(150,150,150);
-  doc.setFontSize(isSmall ? 5 : 8);
-  doc.setFont('helvetica','normal');
-  doc.text(pie||empresa, margin, h-footerH+(isSmall?4.5:7));
-  doc.text(fecha, w-margin, h-footerH+(isSmall?4.5:7), { align:'right' });
-
-  // Marco del rotulo
-  if (rd.marcoWidth > 0) {
-    const [mr,mg,mb] = hexRgb(rd.marcoColor);
-    doc.setDrawColor(mr,mg,mb);
-    doc.setLineWidth(rd.marcoWidth * 0.3);
-    doc.rect(rd.marcoWidth*0.15, rd.marcoWidth*0.15, w - rd.marcoWidth*0.3, h - rd.marcoWidth*0.3);
-  }
+  doc.setFillColor(hr,hg,hb); doc.rect(0,0,w,headerH,'F');
+  if (logo) { try { const imgH=isSmall?8:rd.logoSize/4; const imgW=imgH*2; let logoX=margin; if(rd.logoPos==='center')logoX=(w-imgW)/2; if(rd.logoPos==='right')logoX=w-margin-imgW; doc.addImage(logo,'PNG',logoX,isSmall?2:(headerH-imgH)/2,imgW,imgH); } catch {} }
+  if (rd.empresaPos !== 'hidden') { doc.setTextColor(255,255,255); doc.setFontSize(isSmall?7:rd.empresaSize*0.75); doc.setFont('helvetica','bold'); const nameX=rd.empresaPos==='center'?w/2:(rd.empresaPos==='right'?w-margin:(logo?margin+(isSmall?16:rd.logoSize/2+4):margin)); const align=rd.empresaPos==='center'?'center':(rd.empresaPos==='right'?'right':'left'); doc.text(empresa,nameX,headerH/2+2,{align}); }
+  if (rd.barHeight>0) { const [br,bg,bb]=hexRgb(rd.barColor); doc.setFillColor(br,bg,bb); doc.rect(0,headerH,w,isSmall?1.5:rd.barHeight*0.4,'F'); y=headerH+(isSmall?1.5:rd.barHeight*0.4); } else { y=headerH; }
+  y+=isSmall?4:8;
+  const [tr,tg,tb]=hexRgb(rd.titleColor); doc.setTextColor(tr,tg,tb); doc.setFontSize(isSmall?9:rd.provSize*0.7); doc.setFont('helvetica','bold');
+  const provX=rd.provAlign==='center'?w/2:(rd.provAlign==='right'?w-margin:margin);
+  doc.text(p.nombre,provX,y,{align:rd.provAlign}); y+=isSmall?5:8;
+  const lineH=isSmall?4:6; const [txr,txg,txb]=hexRgb(rd.textColor); doc.setFontSize(isSmall?7:10);
+  const addLine=(label,value)=>{ if(!value)return; doc.setTextColor(100,100,100); doc.setFont('helvetica','bold'); doc.text(label+':',margin,y); doc.setFont('helvetica','normal'); doc.setTextColor(txr,txg,txb); const lines=doc.splitTextToSize(value,contentW-25); doc.text(lines,margin+22,y); y+=lineH*lines.length; };
+  if(campos.rubro&&p.rubro)addLine('Rubro',p.rubro);
+  if(campos.direccion&&p.direccion)addLine('Dirección',[p.direccion,p.localidad,p.provincia,p.codigo_postal?'CP '+p.codigo_postal:''].filter(Boolean).join(', '));
+  if(campos.horario&&p.horario)addLine('Horario',p.horario);
+  if(contact&&campos.telefono&&(contact.telefono||contact.celular))addLine('Contacto',`${contact.nombre}${contact.cargo?' ('+contact.cargo+')':''}${contact.telefono?' — '+contact.telefono:''}${contact.celular?' / '+contact.celular:''}`);
+  if(extra){const [br,bg,bb]=hexRgb(rd.barColor);doc.setTextColor(br,bg,bb);doc.setFont('helvetica','bold');doc.text('! '+extra,margin,y);y+=lineH;}
+  if(detalle){y+=3;doc.setDrawColor(200,200,200);doc.line(margin,y,w-margin,y);y+=4;doc.setTextColor(120,120,120);doc.setFontSize(isSmall?6:8);doc.setFont('helvetica','bold');doc.text('DETALLE:',margin,y);y+=lineH-1;doc.setFont('helvetica','normal');doc.setTextColor(txr,txg,txb);doc.setFontSize(isSmall?7:10);const lines=doc.splitTextToSize(detalle,contentW);doc.text(lines,margin,y);}
+  const footerH=isSmall?7:10; doc.setFillColor(247,249,252); doc.rect(0,h-footerH,w,footerH,'F'); doc.setDrawColor(221,227,236); doc.line(0,h-footerH,w,h-footerH); doc.setTextColor(150,150,150); doc.setFontSize(isSmall?5:8); doc.setFont('helvetica','normal');
+  doc.text(pie||empresa,margin,h-footerH+(isSmall?4.5:7)); doc.text(fecha,w-margin,h-footerH+(isSmall?4.5:7),{align:'right'});
+  if(rd.marcoWidth>0){const [mr,mg,mb]=hexRgb(rd.marcoColor);doc.setDrawColor(mr,mg,mb);doc.setLineWidth(rd.marcoWidth*0.3);doc.rect(rd.marcoWidth*0.15,rd.marcoWidth*0.15,w-rd.marcoWidth*0.3,h-rd.marcoWidth*0.3);}
   doc.save(`rotulo_${p.nombre.replace(/\s+/g,'_')}_${w}x${h}mm.pdf`);
   toast('PDF generado', 'success');
 }
@@ -1033,65 +1185,51 @@ async function previewPDF() {
   const contact = pContacts[0];
   const margin = isSmall ? 4 : 14;
   const contentW = w - margin * 2;
-  const hexRgb = hex => [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+  const hexRgb = hex => [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)];
   let y = 0;
   const headerH = isSmall ? 12 : 18;
   const [hr,hg,hb] = hexRgb(rd.headerBg);
   doc.setFillColor(hr,hg,hb); doc.rect(0,0,w,headerH,'F');
-  if (logo) { try { const imgH=isSmall?8:rd.logoSize/4; const imgW=imgH*2; let lx=margin; if(rd.logoPos==='center')lx=(w-imgW)/2; if(rd.logoPos==='right')lx=w-margin-imgW; doc.addImage(logo,'PNG',lx,isSmall?2:(headerH-imgH)/2,imgW,imgH); } catch {} }
-  if (rd.empresaPos !== 'hidden') { const [ecr2,ecg2,ecb2]=hexRgb(rd.empresaColor||'#ffffff'); doc.setTextColor(ecr2,ecg2,ecb2); doc.setFontSize(isSmall?7:rd.empresaSize*0.75); doc.setFont('helvetica','bold'); const nx=rd.empresaPos==='center'?w/2:(rd.empresaPos==='right'?w-margin:(logo?margin+(isSmall?16:rd.logoSize/2+4):margin)); doc.text(empresa,nx,headerH/2+2,{align:rd.empresaPos==='center'?'center':(rd.empresaPos==='right'?'right':'left')}); }
-  if (rd.barHeight > 0) { const [br,bg,bb]=hexRgb(rd.barColor); doc.setFillColor(br,bg,bb); doc.rect(0,headerH,w,isSmall?1.5:rd.barHeight*0.4,'F'); y=headerH+(isSmall?1.5:rd.barHeight*0.4); } else { y=headerH; }
-  y += isSmall?4:8;
-  const [tr,tg,tb]=hexRgb(rd.titleColor); doc.setTextColor(tr,tg,tb); doc.setFontSize(isSmall?9:rd.provSize*0.7); doc.setFont('helvetica','bold');
+  if(logo){try{const imgH=isSmall?8:rd.logoSize/4;const imgW=imgH*2;let lx=margin;if(rd.logoPos==='center')lx=(w-imgW)/2;if(rd.logoPos==='right')lx=w-margin-imgW;doc.addImage(logo,'PNG',lx,isSmall?2:(headerH-imgH)/2,imgW,imgH);}catch{}}
+  if(rd.empresaPos!=='hidden'){const [ecr2,ecg2,ecb2]=hexRgb(rd.empresaColor||'#ffffff');doc.setTextColor(ecr2,ecg2,ecb2);doc.setFontSize(isSmall?7:rd.empresaSize*0.75);doc.setFont('helvetica','bold');const nx=rd.empresaPos==='center'?w/2:(rd.empresaPos==='right'?w-margin:(logo?margin+(isSmall?16:rd.logoSize/2+4):margin));doc.text(empresa,nx,headerH/2+2,{align:rd.empresaPos==='center'?'center':(rd.empresaPos==='right'?'right':'left')});}
+  if(rd.barHeight>0){const [br,bg,bb]=hexRgb(rd.barColor);doc.setFillColor(br,bg,bb);doc.rect(0,headerH,w,isSmall?1.5:rd.barHeight*0.4,'F');y=headerH+(isSmall?1.5:rd.barHeight*0.4);}else{y=headerH;}
+  y+=isSmall?4:8;
+  const [tr,tg,tb]=hexRgb(rd.titleColor);doc.setTextColor(tr,tg,tb);doc.setFontSize(isSmall?9:rd.provSize*0.7);doc.setFont('helvetica','bold');
   const provX=rd.provAlign==='center'?w/2:(rd.provAlign==='right'?w-margin:margin);
-  doc.text(p.nombre,provX,y,{align:rd.provAlign}); y+=isSmall?5:8;
-  const lineH=isSmall?4:6; const [txr,txg,txb]=hexRgb(rd.textColor); doc.setFontSize(isSmall?7:10);
-  const addLine=(lbl,val)=>{ if(!val)return; doc.setTextColor(100,100,100); doc.setFont('helvetica','bold'); doc.text(lbl+':',margin,y); doc.setFont('helvetica','normal'); doc.setTextColor(txr,txg,txb); const ls=doc.splitTextToSize(val,contentW-25); doc.text(ls,margin+22,y); y+=lineH*ls.length; };
+  doc.text(p.nombre,provX,y,{align:rd.provAlign});y+=isSmall?5:8;
+  const lineH=isSmall?4:6;const [txr,txg,txb]=hexRgb(rd.textColor);doc.setFontSize(isSmall?7:10);
+  const addLine=(lbl,val)=>{if(!val)return;doc.setTextColor(100,100,100);doc.setFont('helvetica','bold');doc.text(lbl+':',margin,y);doc.setFont('helvetica','normal');doc.setTextColor(txr,txg,txb);const ls=doc.splitTextToSize(val,contentW-25);doc.text(ls,margin+22,y);y+=lineH*ls.length;};
   if(campos.rubro&&p.rubro)addLine('Rubro',p.rubro);
   if(campos.direccion&&p.direccion)addLine('Direccion',[p.direccion,p.localidad,p.provincia,p.codigo_postal?'CP '+p.codigo_postal:''].filter(Boolean).join(', '));
   if(campos.horario&&p.horario)addLine('Horario',p.horario);
   if(contact&&campos.telefono&&(contact.telefono||contact.celular))addLine('Contacto',`${contact.nombre}${contact.cargo?' ('+contact.cargo+')':''}${contact.telefono?' - '+contact.telefono:''}${contact.celular?' / '+contact.celular:''}`);
   if(extra){const [br,bg,bb]=hexRgb(rd.barColor);doc.setTextColor(br,bg,bb);doc.setFont('helvetica','bold');doc.text('! '+extra,margin,y);y+=lineH;}
   if(detalle){y+=3;doc.setDrawColor(200,200,200);doc.line(margin,y,w-margin,y);y+=4;doc.setTextColor(120,120,120);doc.setFontSize(isSmall?6:8);doc.setFont('helvetica','bold');doc.text('DETALLE:',margin,y);y+=lineH-1;doc.setFont('helvetica','normal');doc.setTextColor(txr,txg,txb);doc.setFontSize(isSmall?7:10);const ls=doc.splitTextToSize(detalle,contentW);doc.text(ls,margin,y);}
-  const footerH=isSmall?7:10; doc.setFillColor(247,249,252); doc.rect(0,h-footerH,w,footerH,'F'); doc.setDrawColor(221,227,236); doc.line(0,h-footerH,w,h-footerH); doc.setTextColor(150,150,150); doc.setFontSize(isSmall?5:8); doc.setFont('helvetica','normal');
-  doc.text(pie||empresa,margin,h-footerH+(isSmall?4.5:7)); doc.text(fecha,w-margin,h-footerH+(isSmall?4.5:7),{align:'right'});
-  if (rd.marcoWidth > 0) {
-    const [mr,mg,mb] = hexRgb(rd.marcoColor);
-    doc.setDrawColor(mr,mg,mb);
-    doc.setLineWidth(rd.marcoWidth * 0.3);
-    doc.rect(rd.marcoWidth*0.15, rd.marcoWidth*0.15, w - rd.marcoWidth*0.3, h - rd.marcoWidth*0.3);
-  }
+  const footerH=isSmall?7:10;doc.setFillColor(247,249,252);doc.rect(0,h-footerH,w,footerH,'F');doc.setDrawColor(221,227,236);doc.line(0,h-footerH,w,h-footerH);doc.setTextColor(150,150,150);doc.setFontSize(isSmall?5:8);doc.setFont('helvetica','normal');
+  doc.text(pie||empresa,margin,h-footerH+(isSmall?4.5:7));doc.text(fecha,w-margin,h-footerH+(isSmall?4.5:7),{align:'right'});
+  if(rd.marcoWidth>0){const [mr,mg,mb]=hexRgb(rd.marcoColor);doc.setDrawColor(mr,mg,mb);doc.setLineWidth(rd.marcoWidth*0.3);doc.rect(rd.marcoWidth*0.15,rd.marcoWidth*0.15,w-rd.marcoWidth*0.3,h-rd.marcoWidth*0.3);}
   window.open(doc.output('bloburl'), '_blank');
 }
 
-// ===== EXPORT EXCEL =====
+// ===== EXPORT EXCEL PROVEEDORES =====
 function exportExcel() {
   if (proveedores.length === 0) { toast('Sin datos para exportar', 'error'); return; }
-
   const rows = proveedores.map(p => {
     const pContacts = contactos.filter(c => c.proveedor_id === p.id);
     return {
-      'Nombre': p.nombre,
-      'Rubro': p.rubro || '',
-      'Email': p.email || '',
-      'Dirección': p.direccion || '',
-      'Localidad': p.localidad || '',
-      'Provincia': p.provincia || '',
-      'Horario': p.horario || '',
-      'Estado': p.activo ? 'Activo' : 'Inactivo',
-      'Notas': p.notas || '',
-      'Última modificación': p.updated_at ? new Date(p.updated_at).toLocaleDateString('es-AR') : '',
-      'Modificado por': p.modificado_por || '',
-      'Contactos': pContacts.map(c => `${c.nombre}${c.cargo?' ('+c.cargo+')':''}${c.telefono?' T:'+c.telefono:''}${c.celular?' C:'+c.celular:''}`).join(' | ')
+      'Nombre': p.nombre, 'Rubro': p.rubro||'', 'Email': p.email||'',
+      'Dirección': p.direccion||'', 'Localidad': p.localidad||'', 'Provincia': p.provincia||'',
+      'Horario': p.horario||'', 'Estado': p.activo?'Activo':'Inactivo', 'Notas': p.notas||'',
+      'Última modificación': p.updated_at?new Date(p.updated_at).toLocaleDateString('es-AR'):'',
+      'Modificado por': p.modificado_por||'',
+      'Contactos': pContacts.map(c=>`${c.nombre}${c.cargo?' ('+c.cargo+')':''}${c.telefono?' T:'+c.telefono:''}${c.celular?' C:'+c.celular:''}`).join(' | ')
     };
   });
-
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = Object.keys(rows[0]).map(() => ({ wch: 20 }));
+  ws['!cols'] = Object.keys(rows[0]).map(()=>({wch:20}));
   XLSX.utils.book_append_sheet(wb, ws, 'Proveedores');
-  const fecha = new Date().toISOString().slice(0,10);
-  XLSX.writeFile(wb, `proveedores_cremac_${fecha}.xlsx`);
+  XLSX.writeFile(wb, `proveedores_${new Date().toISOString().slice(0,10)}.xlsx`);
   toast('Excel exportado', 'success');
 }
 
@@ -1106,29 +1244,23 @@ async function loadUsers() {
     }
     tbody.innerHTML = users.map(u => `
       <tr>
-        <td><strong>${esc(u.nombre || '')} ${esc(u.apellido || '')}</strong></td>
-        <td>${esc(u.email || '')}</td>
+        <td><strong>${esc(u.nombre||'')} ${esc(u.apellido||'')}</strong></td>
+        <td>${esc(u.email||'')}</td>
         <td><span class="badge ${u.rol==='admin'?'badge-rubro':'badge-active'}">${u.rol==='admin'?'Admin':'Usuario'}</span></td>
         <td><span class="badge ${u.activo!==false?'badge-active':'badge-inactive'}">${u.activo!==false?'Activo':'Inactivo'}</span></td>
-        <td>
-          <div class="td-actions">
-            <button class="btn btn-ghost btn-sm" onclick="openUserModal('${u.id}')">Editar</button>
-            <button class="btn btn-danger-ghost btn-sm" onclick="toggleUserActivo('${u.id}', ${u.activo!==false})">${u.activo!==false?'Desactivar':'Activar'}</button>
-          </div>
-        </td>
+        <td><div class="td-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openUserModal('${u.id}')">Editar</button>
+          <button class="btn btn-danger-ghost btn-sm" onclick="toggleUserActivo('${u.id}',${u.activo!==false})">${u.activo!==false?'Desactivar':'Activar'}</button>
+        </div></td>
       </tr>`).join('');
-  } catch(e) {
-    toast('Error al cargar usuarios', 'error');
-  }
+  } catch { toast('Error al cargar usuarios', 'error'); }
 }
 
 function openUserModal(id = null) {
   editingUserId = id;
   document.getElementById('modalUserTitle').textContent = id ? 'Editar Usuario' : 'Nuevo Usuario';
   document.getElementById('u_passGroup').style.display = id ? 'none' : 'block';
-
   if (id) {
-    // We don't fetch user details again, just show empty for edit
     ['nombre','apellido','email'].forEach(f => { document.getElementById('u_'+f).value = ''; });
   } else {
     ['nombre','apellido','email','pass'].forEach(f => { const el = document.getElementById('u_'+f); if(el) el.value = ''; });
@@ -1148,9 +1280,7 @@ async function saveUser() {
 
   if (!editingUserId) {
     if (!pass || pass.length < 6) { toast('La contraseña debe tener al menos 6 caracteres', 'error'); return; }
-
     try {
-      // Create user via Supabase Admin API
       const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
         method: 'POST',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${localStorage.getItem('sb_token')}`, 'Content-Type': 'application/json' },
@@ -1158,29 +1288,14 @@ async function saveUser() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.msg || 'Error al crear usuario');
-
-      // Save profile
-      await sbFetch('/usuarios_perfil', {
-        method: 'POST',
-        body: JSON.stringify({ id: data.id, nombre, apellido, email, rol, activo: true })
-      });
-
+      await sbFetch('/usuarios_perfil', { method: 'POST', body: JSON.stringify({ id: data.id, nombre, apellido, email, rol, activo: true }) });
       toast('Usuario creado', 'success');
-    } catch(e) {
-      toast('Error: ' + e.message, 'error');
-      return;
-    }
+    } catch(e) { toast('Error: ' + e.message, 'error'); return; }
   } else {
     try {
-      await sbFetch(`/usuarios_perfil?id=eq.${editingUserId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ nombre, apellido, rol })
-      });
+      await sbFetch(`/usuarios_perfil?id=eq.${editingUserId}`, { method: 'PATCH', body: JSON.stringify({ nombre, apellido, rol }) });
       toast('Usuario actualizado', 'success');
-    } catch(e) {
-      toast('Error al actualizar', 'error');
-      return;
-    }
+    } catch { toast('Error al actualizar', 'error'); return; }
   }
 
   closeModal('modalUser');
@@ -1189,15 +1304,10 @@ async function saveUser() {
 
 async function toggleUserActivo(id, isActive) {
   try {
-    await sbFetch(`/usuarios_perfil?id=eq.${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ activo: !isActive })
-    });
+    await sbFetch(`/usuarios_perfil?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ activo: !isActive }) });
     toast(isActive ? 'Usuario desactivado' : 'Usuario activado', 'success');
     loadUsers();
-  } catch {
-    toast('Error al actualizar usuario', 'error');
-  }
+  } catch { toast('Error al actualizar usuario', 'error'); }
 }
 
 // ===== TABS =====
@@ -1205,8 +1315,10 @@ function showTab(tab) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
   document.getElementById('paneProveedores').style.display = tab === 'proveedores' ? 'block' : 'none';
+  document.getElementById('paneComisionistas').style.display = tab === 'comisionistas' ? 'block' : 'none';
   document.getElementById('paneAdmin').style.display = tab === 'admin' ? 'block' : 'none';
   if (tab === 'admin') { loadUsers(); initAdminRotuloPanel(); }
+  if (tab === 'comisionistas') { loadComisionistas(); }
 }
 
 // ===== MODALS =====
@@ -1226,8 +1338,7 @@ document.addEventListener('keydown', e => {
 function toast(msg, type='success') {
   const el = document.getElementById('toast');
   const icons = { success: '✓', error: '✕' };
-  const color = type==='success' ? 'var(--success)' : 'var(--danger)';
-  el.innerHTML = `<span style="color:${color};font-size:16px">${icons[type]||'ℹ'}</span> ${msg}`;
+  el.innerHTML = `<span style="color:${type==='success'?'var(--success)':'var(--danger)'};font-size:16px">${icons[type]||'ℹ'}</span> ${msg}`;
   el.className = `toast ${type} show`;
   setTimeout(() => el.classList.remove('show'), 3200);
 }
