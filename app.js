@@ -110,12 +110,31 @@ async function loadUserProfile(uid, email) {
 
 function doLogout() {
   if (!confirm('¿Cerrar sesión?')) return;
+  closeMobileMenu();
   localStorage.removeItem('sb_token');
   localStorage.removeItem('sb_refresh');
   localStorage.removeItem('sb_user_id');
   localStorage.removeItem('sb_user_email');
   document.getElementById('authScreen').style.display = 'flex';
   document.getElementById('appScreen').classList.remove('visible');
+}
+
+// ===== MOBILE MENU =====
+function toggleMobileMenu() {
+  const menu = document.getElementById('mobileMenu');
+  if (menu.classList.contains('open')) {
+    closeMobileMenu();
+  } else {
+    menu.classList.add('open');
+    document.getElementById('mobileMenuOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeMobileMenu() {
+  document.getElementById('mobileMenu')?.classList.remove('open');
+  document.getElementById('mobileMenuOverlay')?.classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 // ===== INIT =====
@@ -125,11 +144,18 @@ async function initApp() {
 
   const nombre = currentUser?.nombre || currentUser?.email?.split('@')[0] || 'Usuario';
   const apellido = currentUser?.apellido || '';
-  document.getElementById('userName').textContent = `${nombre} ${apellido}`.trim();
-  document.getElementById('userAvatar').textContent = nombre[0].toUpperCase();
+  const fullName = `${nombre} ${apellido}`.trim();
+  const initial = nombre[0].toUpperCase();
+
+  document.getElementById('userName').textContent = fullName;
+  document.getElementById('userAvatar').textContent = initial;
+  document.getElementById('mobileUsername').textContent = fullName;
+  document.getElementById('mobileEmail').textContent = currentUser?.email || '';
+  document.getElementById('mobileAvatar').textContent = initial;
 
   if (isAdmin) {
     document.getElementById('tab-admin').style.display = 'flex';
+    document.getElementById('mm-admin').style.display = 'flex';
   }
 
   await loadConfig();
@@ -1314,6 +1340,8 @@ async function toggleUserActivo(id, isActive) {
 function showTab(tab) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.mobile-nav-item').forEach(t => t.classList.remove('active'));
+  document.getElementById('mm-' + tab)?.classList.add('active');
   document.getElementById('paneProveedores').style.display = tab === 'proveedores' ? 'block' : 'none';
   document.getElementById('paneComisionistas').style.display = tab === 'comisionistas' ? 'block' : 'none';
   document.getElementById('paneAdmin').style.display = tab === 'admin' ? 'block' : 'none';
@@ -1331,7 +1359,10 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
+    closeMobileMenu();
+  }
 });
 
 // ===== TOAST =====

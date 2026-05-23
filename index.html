@@ -54,6 +54,11 @@
         <span class="user-name" id="userName">Usuario</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </div>
+      <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menú">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
     </div>
   </header>
 
@@ -619,6 +624,38 @@
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- ===== MOBILE MENU ===== -->
+<div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+<div class="mobile-menu" id="mobileMenu">
+  <div class="mobile-menu-header">
+    <div class="mobile-menu-user-info">
+      <div class="user-avatar" id="mobileAvatar">U</div>
+      <div style="min-width:0">
+        <div class="mobile-menu-username" id="mobileUsername">Usuario</div>
+        <div class="mobile-menu-email" id="mobileEmail"></div>
+      </div>
+    </div>
+    <button class="mobile-menu-close" onclick="closeMobileMenu()">✕</button>
+  </div>
+  <nav class="mobile-menu-nav">
+    <button class="mobile-nav-item active" id="mm-proveedores" onclick="showTab('proveedores');closeMobileMenu()">
+      <span class="mobile-nav-icon">🧀</span><span>Proveedores</span>
+    </button>
+    <button class="mobile-nav-item" id="mm-comisionistas" onclick="showTab('comisionistas');closeMobileMenu()">
+      <span class="mobile-nav-icon">🤝</span><span>Comisionistas</span>
+    </button>
+    <button class="mobile-nav-item" id="mm-admin" style="display:none" onclick="showTab('admin');closeMobileMenu()">
+      <span class="mobile-nav-icon">⚙️</span><span>Administrador</span>
+    </button>
+  </nav>
+  <div class="mobile-menu-footer">
+    <button class="mobile-logout-btn" onclick="doLogout()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Cerrar Sesión
+    </button>
+  </div>
+</div>
 
 <script src="app.js"></script>
 </body>
