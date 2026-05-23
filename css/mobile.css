@@ -1,0 +1,202 @@
+/* Menú hamburguesa, menú lateral y todos los breakpoints responsive */
+
+/* ===== HAMBURGER ===== */
+.hamburger-btn {
+  display: none;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.hamburger-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* ===== MENÚ LATERAL MOBILE ===== */
+.mobile-menu-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15,30,60,0.55);
+  z-index: 200;
+  backdrop-filter: blur(2px);
+}
+.mobile-menu-overlay.open { display: block; }
+
+.mobile-menu {
+  position: fixed;
+  top: 0;
+  right: -300px;
+  width: 280px;
+  max-width: 85vw;
+  height: 100%;
+  background: var(--white);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 32px rgba(0,0,0,0.2);
+  transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.mobile-menu.open { right: 0; }
+
+.mobile-menu-header {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%);
+  padding: 20px 16px 20px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mobile-menu-user-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+
+.mobile-menu-username {
+  font-size: 15px; font-weight: 700; color: white;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mobile-menu-email {
+  font-size: 11px; color: rgba(255,255,255,0.65);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
+}
+
+.mobile-menu-close {
+  background: rgba(255,255,255,0.15); border: none; color: white;
+  font-size: 16px; width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: background 0.15s;
+  line-height: 1; font-family: var(--font);
+}
+.mobile-menu-close:hover { background: rgba(255,255,255,0.3); }
+
+.mobile-menu-nav { flex: 1; padding: 8px 0; overflow-y: auto; }
+
+.mobile-nav-item {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; padding: 15px 20px;
+  background: none; border: none; border-left: 3px solid transparent;
+  font-family: var(--font); font-size: 15px; font-weight: 600;
+  color: var(--text-mid); cursor: pointer; text-align: left;
+  transition: all 0.15s;
+}
+.mobile-nav-item:hover { background: var(--surface2); color: var(--blue); }
+.mobile-nav-item.active {
+  background: rgba(26,58,107,0.07);
+  color: var(--blue);
+  border-left-color: var(--red);
+  font-weight: 700;
+}
+.mobile-nav-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
+
+.mobile-menu-footer { padding: 12px 16px 24px; border-top: 1.5px solid var(--border); }
+
+.mobile-logout-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 13px;
+  background: var(--danger-bg); border: 1.5px solid transparent;
+  border-radius: var(--radius-sm); font-family: var(--font);
+  font-size: 14px; font-weight: 700; color: var(--danger);
+  cursor: pointer; transition: all 0.15s;
+}
+.mobile-logout-btn:hover { border-color: var(--danger); background: #f8d0d2; }
+
+/* ===== BREAKPOINT 768px ===== */
+@media (max-width: 768px) {
+  /* Mostrar hamburguesa, ocultar nav y user-badge */
+  .hamburger-btn { display: flex; }
+  .app-nav { display: none !important; }
+  .user-badge { display: none !important; }
+
+  /* Layout general */
+  .app-header { padding: 0 14px; }
+  .app-main { padding: 14px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-group.full { grid-column: 1; }
+  .modal { padding: 18px; }
+  .modal-footer { gap: 8px; }
+  .modal-footer .btn { flex: 1; justify-content: center; font-size: 12px; padding: 10px 8px; }
+  .section-title { font-size: 17px; }
+  table { font-size: 12px; }
+  th, td { padding: 10px 10px; }
+  .td-actions { flex-wrap: wrap; gap: 3px; }
+  .btn-icon { min-width: 36px; min-height: 36px; padding: 0; justify-content: center; align-items: center; }
+  .header-title { display: none; }
+  .contact-row-grid { grid-template-columns: 1fr; }
+
+  /* Tabla → cards */
+  .table-wrap { display: none; }
+  .prov-cards { display: flex; flex-direction: column; gap: 10px; }
+
+  /* Toolbar */
+  .toolbar { flex-direction: column; }
+  .search-wrap { min-width: unset; }
+  .filter-select { width: 100%; }
+
+  /* Encabezado de sección */
+  .section-header { flex-direction: column; align-items: flex-start; }
+  .section-actions { width: 100%; }
+  .section-actions .btn { flex: 1; justify-content: center; }
+
+  /* Admin */
+  .admin-grid { grid-template-columns: 1fr !important; }
+  .admin-card-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .admin-design-grid { grid-template-columns: 1fr !important; }
+  .admin-design-grid > div:first-child { max-height: none !important; overflow-y: visible !important; padding-right: 0 !important; }
+
+  /* Rótulo */
+  .rotulo-modal-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+  #rotuloPreviewWrap { max-height: 200px; overflow: hidden; }
+
+  /* Campos custom */
+  .campo-custom-row { grid-template-columns: 1fr 32px; grid-template-rows: auto auto; }
+  .campo-custom-row select { grid-column: 1; }
+  .campo-custom-row .btn-remove-contact { grid-row: 1; grid-column: 2; align-self: center; }
+}
+
+/* ===== BREAKPOINT 480px ===== */
+@media (max-width: 480px) {
+  .stats-row { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat-card { padding: 12px 8px; gap: 8px; flex-direction: column; text-align: center; }
+  .stat-icon { width: 34px; height: 34px; font-size: 16px; }
+  .stat-number { font-size: 20px; }
+  .stat-label { font-size: 10px; }
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 90vh; overflow-y: auto;
+    margin: 0; width: 100%; max-width: 100% !important;
+    padding: 18px 14px;
+  }
+}
+
+/* ===== CARDS MOBILE ===== */
+@media (max-width: 768px) {
+  .prov-card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    box-shadow: var(--shadow);
+  }
+  .prov-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .prov-card-name { font-size: 15px; font-weight: 700; color: var(--blue); flex: 1; margin-right: 8px; }
+  .prov-card-body { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+  .prov-card-row { font-size: 13px; color: var(--text-mid); display: flex; gap: 6px; align-items: flex-start; }
+  .prov-card-actions { display: flex; gap: 6px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .prov-card-actions .btn { flex: 1; justify-content: center; font-size: 12px; padding: 8px 4px; }
+}
+
+/* ===== RÓTULO MODAL MOBILE (bottom sheet) ===== */
+@media (max-width: 768px) {
+  #modalRotulo .modal {
+    max-width: 100% !important; width: 100% !important;
+    padding: 16px !important; margin: 0 !important;
+    border-radius: 20px 20px 0 0 !important;
+    position: fixed !important; bottom: 0 !important; left: 0 !important;
+    max-height: 92vh !important; overflow-y: auto !important;
+  }
+  #modalRotulo.open { align-items: flex-end !important; padding: 0 !important; }
+}

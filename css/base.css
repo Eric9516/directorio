@@ -1,0 +1,121 @@
+/* Variables, reset, formularios y botones */
+:root {
+  --blue: #1a3a6b;
+  --blue-mid: #1e4d9b;
+  --blue-light: #2d6bc4;
+  --red: #c8222a;
+  --red-light: #e03038;
+  --white: #ffffff;
+  --bg: #f0f4f8;
+  --surface: #ffffff;
+  --surface2: #f7f9fc;
+  --border: #dde3ec;
+  --text: #1a2a3a;
+  --text-mid: #4a5568;
+  --text-muted: #8896a8;
+  --success: #1a7a4a;
+  --success-bg: #e6f4ec;
+  --danger: #c8222a;
+  --danger-bg: #fdecea;
+  --shadow: 0 2px 8px rgba(26,58,107,0.08);
+  --shadow-lg: 0 8px 32px rgba(26,58,107,0.13);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: 'Nunito', sans-serif;
+  --font-display: 'Playfair Display', serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ===== FORMULARIOS ===== */
+.form-group { margin-bottom: 16px; }
+
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="number"],
+select,
+textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--blue-light);
+  box-shadow: 0 0 0 3px rgba(45,107,196,0.12);
+  background: var(--white);
+}
+
+input::placeholder, textarea::placeholder { color: var(--text-muted); font-weight: 400; }
+textarea { resize: vertical; min-height: 80px; }
+select option { background: var(--white); }
+input[type="file"] { display: none; }
+
+/* ===== BOTONES ===== */
+.btn {
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.btn-primary { background: var(--blue); color: white; }
+.btn-primary:hover { background: var(--blue-mid); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,58,107,0.3); }
+
+.btn-red { background: var(--red); color: white; }
+.btn-red:hover { background: var(--red-light); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(200,34,42,0.3); }
+
+.btn-ghost { background: transparent; color: var(--text-mid); border: 1.5px solid var(--border); }
+.btn-ghost:hover { background: var(--surface2); border-color: #b0bec5; color: var(--text); }
+
+.btn-success { background: var(--success); color: white; }
+.btn-success:hover { background: #1d8a54; }
+
+.btn-danger-ghost { background: transparent; color: var(--danger); border: 1.5px solid transparent; padding: 7px 12px; font-size: 13px; }
+.btn-danger-ghost:hover { background: var(--danger-bg); border-color: var(--danger); }
+
+.btn-sm { padding: 7px 14px; font-size: 13px; }
+.btn-icon { padding: 8px; border-radius: 8px; }
+.btn-full { width: 100%; justify-content: center; padding: 13px; font-size: 15px; }
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #b0bec5; }
