@@ -130,19 +130,22 @@ function renderTaskCard(t) {
   const isCompleted = t.status === 'completed';
   return `
     <div class="task-card ${t.traffic_level}" onclick="openTaskDetail('${t.id}')">
-      <div class="task-card-body">
-        <div class="task-card-top">
-          <div class="task-card-title">${isCompleted ? '<s style="opacity:0.5">' : ''}${esc(t.title)}${isCompleted ? '</s>' : ''}</div>
-          <span class="traffic-badge ${t.traffic_level}">${trafficLabel(t.traffic_level)}</span>
-          ${t.is_stagnant ? '<span class="stagnant-badge">\u26a0</span>' : ''}
+      <div class="task-card-row">
+        <div class="task-card-body">
+          <div class="task-card-top">
+            <div class="task-card-title">${isCompleted ? '<s style="opacity:0.5">' : ''}${esc(t.title)}${isCompleted ? '</s>' : ''}</div>
+            <span class="traffic-badge ${t.traffic_level}">${trafficLabel(t.traffic_level)}</span>
+            ${t.is_stagnant ? '<span class="stagnant-badge">\u26a0</span>' : ''}
+          </div>
+          ${t.description ? `<div class="task-card-desc">${esc(t.description)}</div>` : ''}
+          <div class="task-card-meta">
+            <span class="task-meta-item">\ud83d\udcc5 ${formatDate(t.start_date)}</span>
+            <span class="task-meta-item">\u23f3 ${t.pending_days}d</span>
+            ${t.carry_count > 0 ? `<span class="task-meta-item">\ud83d\udd04 ${t.carry_count}</span>` : ''}
+          </div>
         </div>
-        <div class="task-card-meta">
-          <span class="task-meta-item">\ud83d\udcc5 ${formatDate(t.start_date)}</span>
-          <span class="task-meta-item">\u23f3 ${t.pending_days}d</span>
-          ${t.carry_count > 0 ? `<span class="task-meta-item">\ud83d\udd04 ${t.carry_count}</span>` : ''}
-        </div>
+        ${!isCompleted ? `<div class="task-card-actions" onclick="event.stopPropagation()"><button class="task-action-btn complete" onclick="completeTask('${t.id}')">\u2713</button></div>` : ''}
       </div>
-      ${!isCompleted ? `<div class="task-card-actions" onclick="event.stopPropagation()"><button class="task-action-btn complete" onclick="completeTask('${t.id}')">\u2713</button></div>` : ''}
     </div>`;
 }
 
