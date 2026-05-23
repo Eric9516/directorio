@@ -578,6 +578,10 @@ tbody tr:hover { background: var(--surface2); }
   font-size: 13px;
 }
 
+.campo-custom-row .btn-remove-contact {
+  position: static;
+}
+
 /* ===== TOAST ===== */
 .toast {
   position: fixed;
