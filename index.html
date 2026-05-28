@@ -326,13 +326,25 @@
       <div class="tareas-date" id="tareasDate"></div>
       <div class="tareas-stats" id="tareasStats"></div>
 
-      <div class="tareas-filters">
-        <button class="tareas-filter-btn active" data-filter="todas" onclick="setTareasFilter('todas')">Todas</button>
-        <button class="tareas-filter-btn" data-filter="red" onclick="setTareasFilter('red')">🔴 Rojas</button>
-        <button class="tareas-filter-btn" data-filter="yellow" onclick="setTareasFilter('yellow')">🟡 Amarillas</button>
-        <button class="tareas-filter-btn" data-filter="green" onclick="setTareasFilter('green')">🟢 Verdes</button>
-        <button class="tareas-filter-btn" data-filter="stagnant" onclick="setTareasFilter('stagnant')">⚠ Estancadas</button>
-        <button class="tareas-filter-btn" data-filter="completed" onclick="setTareasFilter('completed')">✅ Completadas</button>
+      <div class="tareas-toolbar">
+        <div class="tareas-filters">
+          <button class="tareas-filter-btn active" data-filter="todas" onclick="setTareasFilter('todas')">Todas</button>
+          <button class="tareas-filter-btn" data-filter="red" onclick="setTareasFilter('red')"><span class="filter-dot dot-red"></span>Rojas</button>
+          <button class="tareas-filter-btn" data-filter="yellow" onclick="setTareasFilter('yellow')"><span class="filter-dot dot-yellow"></span>Amarillas</button>
+          <button class="tareas-filter-btn" data-filter="green" onclick="setTareasFilter('green')"><span class="filter-dot dot-green"></span>Verdes</button>
+          <button class="tareas-filter-btn" data-filter="stagnant" onclick="setTareasFilter('stagnant')">⚠ Estancadas</button>
+          <button class="tareas-filter-btn" data-filter="completed" onclick="setTareasFilter('completed')">✓ Completadas</button>
+        </div>
+        <div class="vista-selector">
+          <button class="vista-btn" onclick="toggleVistaDropdown()">
+            <span id="vistaIcon">☰</span> Vista
+          </button>
+          <div class="vista-dropdown" id="vistaDropdown">
+            <button class="vista-option active" data-view="wide" onclick="setTaskView('wide')">▬ Cards anchas</button>
+            <button class="vista-option" data-view="list" onclick="setTaskView('list')">☰ Lista</button>
+            <button class="vista-option" data-view="grid" onclick="setTaskView('grid')">▦ Cuadrícula</button>
+          </div>
+        </div>
       </div>
 
       <div id="tareasListContainer"></div>

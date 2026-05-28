@@ -48,20 +48,20 @@ function renderTareasStats() {
   const el = document.getElementById('tareasStats');
   if (!el) return;
   el.innerHTML = `
-    <div class="tareas-stat">
-      <div class="tareas-stat-number red">${red}</div>
+    <div class="tareas-stat stat-red">
+      <div class="tareas-stat-number">${red}</div>
       <div class="tareas-stat-label">Rojas</div>
     </div>
-    <div class="tareas-stat">
-      <div class="tareas-stat-number yellow">${yellow}</div>
+    <div class="tareas-stat stat-yellow">
+      <div class="tareas-stat-number">${yellow}</div>
       <div class="tareas-stat-label">Amarillas</div>
     </div>
-    <div class="tareas-stat">
-      <div class="tareas-stat-number green">${green}</div>
+    <div class="tareas-stat stat-green">
+      <div class="tareas-stat-number">${green}</div>
       <div class="tareas-stat-label">Verdes</div>
     </div>
-    <div class="tareas-stat">
-      <div class="tareas-stat-number blue">${stagnant}</div>
+    <div class="tareas-stat stat-blue">
+      <div class="tareas-stat-number">${stagnant}</div>
       <div class="tareas-stat-label">Estancadas</div>
     </div>
   `;
@@ -69,6 +69,7 @@ function renderTareasStats() {
 
 // ===== FILTRO ACTIVO =====
 let currentFilter = 'todas';
+let currentView = 'wide';
 
 export function setTareasFilter(filter) {
   currentFilter = filter;
@@ -123,29 +124,46 @@ function renderTareas() {
     return;
   }
 
-  container.innerHTML = `<div class="task-list">${tasks.map(renderTaskCard).join('')}</div>`;
+  container.innerHTML = `<div class="task-list view-${currentView}">${tasks.map(t => renderTaskCard(t, currentView)).join('')}</div>`;
 }
 
-function renderTaskCard(t) {
+function renderTaskCard(t, view) {
   const isCompleted = t.status === 'completed';
+  const title = `${isCompleted ? '<s style="opacity:0.5">' : ''}${esc(t.title)}${isCompleted ? '</s>' : ''}`;
+  const badge = `<span class="traffic-badge ${t.traffic_level}">${trafficLabel(t.traffic_level)}</span>`;
+  const stagnant = t.is_stagnant ? '<span class="stagnant-badge">\u26a0</span>' : '';
+  const desc = t.description ? `<div class="task-card-desc">${esc(t.description)}</div>` : '';
+  const meta = `<div class="task-card-meta">
+    <span class="task-meta-item">\ud83d\udcc5 ${formatDate(t.start_date)}</span>
+    <span class="task-meta-item">\u23f3 ${t.pending_days}d</span>
+    ${t.carry_count > 0 ? `<span class="task-meta-item">\ud83d\udd04 ${t.carry_count}</span>` : ''}
+  </div>`;
+  const completeBtn = !isCompleted ? `<button class="task-action-btn complete" onclick="event.stopPropagation();completeTask('${t.id}')">\u2713</button>` : '';
+
+  if (view === 'grid') {
+    return `
+      <div class="task-card ${t.traffic_level}" onclick="openTaskDetail('${t.id}')">
+        <div class="task-card-top">
+          <div class="task-card-title">${title}</div>
+          ${badge} ${stagnant}
+        </div>
+        ${desc}
+        ${meta}
+        ${!isCompleted ? `<div class="task-card-bottom">${completeBtn}</div>` : ''}
+      </div>`;
+  }
+
   return `
     <div class="task-card ${t.traffic_level}" onclick="openTaskDetail('${t.id}')">
-      <div class="task-card-row">
-        <div class="task-card-body">
-          <div class="task-card-top">
-            <div class="task-card-title">${isCompleted ? '<s style="opacity:0.5">' : ''}${esc(t.title)}${isCompleted ? '</s>' : ''}</div>
-            <span class="traffic-badge ${t.traffic_level}">${trafficLabel(t.traffic_level)}</span>
-            ${t.is_stagnant ? '<span class="stagnant-badge">\u26a0</span>' : ''}
-          </div>
-          ${t.description ? `<div class="task-card-desc">${esc(t.description)}</div>` : ''}
-          <div class="task-card-meta">
-            <span class="task-meta-item">\ud83d\udcc5 ${formatDate(t.start_date)}</span>
-            <span class="task-meta-item">\u23f3 ${t.pending_days}d</span>
-            ${t.carry_count > 0 ? `<span class="task-meta-item">\ud83d\udd04 ${t.carry_count}</span>` : ''}
-          </div>
+      <div class="task-card-body">
+        <div class="task-card-top">
+          <div class="task-card-title">${title}</div>
+          ${badge} ${stagnant}
         </div>
-        ${!isCompleted ? `<div class="task-card-actions" onclick="event.stopPropagation()"><button class="task-action-btn complete" onclick="completeTask('${t.id}')">\u2713</button></div>` : ''}
+        ${desc}
+        ${meta}
       </div>
+      <div class="task-card-actions">${completeBtn}</div>
     </div>`;
 }
 
@@ -363,6 +381,24 @@ export async function processPendingTasks() {
     toast('Error: ' + e.message, 'error');
   }
 }
+
+// ===== VISTA SELECTOR =====
+export function toggleVistaDropdown() {
+  document.getElementById('vistaDropdown').classList.toggle('open');
+}
+
+export function setTaskView(view) {
+  currentView = view;
+  document.getElementById('vistaDropdown').classList.remove('open');
+  document.querySelectorAll('.vista-option').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  renderTareas();
+}
+
+document.addEventListener('click', e => {
+  const sel = document.querySelector('.vista-selector');
+  const dd = document.getElementById('vistaDropdown');
+  if (dd && sel && !sel.contains(e.target)) dd.classList.remove('open');
+});
 
 // ===== BOTTOM NAV =====
 export function showTareasTab(tab) {
