@@ -802,11 +802,15 @@ async function loadRotuloFotos(grupoId) {
         </div>`;
       }).join('');
     }
-    const status = document.getElementById('rotuloFotosStatus');
-    status.textContent = `${rows.length}/${MAX_FOTOS_ROTULO} fotos`;
-    document.getElementById('rotuloFotosInput').disabled = rows.length >= MAX_FOTOS_ROTULO;
+    const status  = document.getElementById('rotuloFotosStatus');
+    const lleno   = rows.length >= MAX_FOTOS_ROTULO;
+    status.textContent = lleno ? `Llegaste al máximo de ${MAX_FOTOS_ROTULO} fotos.` : `${rows.length}/${MAX_FOTOS_ROTULO} fotos`;
+    document.getElementById('rotuloFotosInput').disabled   = lleno;
+    document.getElementById('rotuloFotosTrigger').disabled = lleno;
   } catch {
     grid.innerHTML = '<div style="font-size:12px;color:var(--danger)">Error al cargar las fotos.</div>';
+    document.getElementById('rotuloFotosInput').disabled   = false;
+    document.getElementById('rotuloFotosTrigger').disabled = false;
   }
 }
 
