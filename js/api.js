@@ -22,6 +22,40 @@ export async function sbFetch(path, opts = {}) {
   return text ? JSON.parse(text) : [];
 }
 
+export async function sbStorageUpload(path, blob, contentType = 'application/pdf') {
+  const token = localStorage.getItem('sb_token');
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/rotulos/${path}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      'Content-Type': contentType,
+      'x-upsert': 'true',
+    },
+    body: blob,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Error ${res.status}`);
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/rotulos/${path}`;
+}
+
+export async function sbStorageDelete(path) {
+  const token = localStorage.getItem('sb_token');
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/rotulos/${path}`, {
+    method: 'DELETE',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Error ${res.status}`);
+  }
+}
+
 export async function sbAuth(path, body) {
   const res = await fetch(`${AUTH_API}${path}`, {
     method: 'POST',

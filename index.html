@@ -575,9 +575,28 @@
           <label>Detalle / Descripción</label>
           <textarea id="rotuloDetalle" placeholder="Ej: Motor eléctrico para reparación — N° interno 0452" rows="4" oninput="renderRotuloPreview()"></textarea>
         </div>
-        <div class="form-group" style="margin-bottom:0">
+        <div class="form-group">
           <label>Texto adicional (opcional)</label>
           <input type="text" id="rotuloExtra" placeholder="Ej: URGENTE — Contactar antes de recibir" oninput="renderRotuloPreview()">
+        </div>
+        <div class="form-group">
+          <label>Documento (opcional)</label>
+          <div style="display:flex;gap:8px">
+            <select id="rotuloTipoDoc" style="flex:1" onchange="renderRotuloPreview()">
+              <option value="">Sin documento</option>
+              <option value="remito">Remito</option>
+              <option value="despacho">Nota de despacho</option>
+            </select>
+            <input type="text" id="rotuloNumDoc" placeholder="N° de documento" style="flex:1" oninput="renderRotuloPreview()">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>N° de bulto (opcional)</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="number" id="rotuloBultoN" min="1" placeholder="Bulto" style="flex:1" oninput="renderRotuloPreview()">
+            <span style="color:var(--text-muted);font-weight:700">/</span>
+            <input type="number" id="rotuloBultoTotal" min="1" placeholder="Total" style="flex:1" oninput="renderRotuloPreview()">
+          </div>
         </div>
       </div>
       <div>
@@ -586,6 +605,10 @@
           <div id="rotuloPreview" style="width:100%"></div>
         </div>
         <div style="margin-top:6px;font-size:11px;color:var(--text-muted);text-align:center">El diseño lo configura el administrador</div>
+        <div style="margin-top:16px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:8px">📁 Rótulos guardados de este proveedor</div>
+          <div id="rotulosGuardadosList" style="display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">

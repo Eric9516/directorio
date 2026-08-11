@@ -14,7 +14,8 @@ import { loadUsers, openUserModal, saveUser, toggleUserActivo,
 import { openRotulo, selectSize, selectDesignSize, updateAdminPreview,
          saveRotuloDesignFromAdmin, resetRotuloDesign, onCustomSizeInput,
          renderRotuloPreview, generatePDF, previewPDF,
-         openModalRotuloDesign, toggleRotuloCampo }                  from './rotulo.js';
+         openModalRotuloDesign, toggleRotuloCampo,
+         deleteRotuloGuardado }                                      from './rotulo.js';
 import { loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
          openTaskDetail, completeTask, cancelTask,
          openReprogramModal, saveReprogram,
@@ -252,6 +253,7 @@ Object.assign(window, {
   openRotulo, selectSize, selectDesignSize, updateAdminPreview,
   saveRotuloDesignFromAdmin, resetRotuloDesign, onCustomSizeInput,
   renderRotuloPreview, generatePDF, previewPDF, openModalRotuloDesign, toggleRotuloCampo,
+  deleteRotuloGuardado,
   // Tareas
   loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
   openTaskDetail, completeTask, cancelTask,

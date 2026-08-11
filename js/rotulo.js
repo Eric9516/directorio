@@ -1,4 +1,4 @@
-import { sbFetch }  from './api.js';
+import { sbFetch, sbStorageUpload, sbStorageDelete, SUPABASE_URL } from './api.js';
 import { state }    from './state.js';
 import { toast }    from './ui.js';
 
@@ -190,6 +190,10 @@ export function openRotulo(id) {
   state.rotuloProvId = id;
   document.getElementById('rotuloDetalle').value = '';
   document.getElementById('rotuloExtra').value   = '';
+  document.getElementById('rotuloTipoDoc').value    = '';
+  document.getElementById('rotuloNumDoc').value     = '';
+  document.getElementById('rotuloBultoN').value     = '';
+  document.getElementById('rotuloBultoTotal').value = '';
   document.querySelectorAll('#modalRotulo .size-btn').forEach(b => b.classList.remove('active'));
   const a4btn = document.querySelector('#modalRotulo .size-btn');
   if (a4btn) a4btn.classList.add('active');
@@ -198,7 +202,68 @@ export function openRotulo(id) {
   if (wEl) wEl.value = '21';
   if (hEl) hEl.value = '29.7';
   renderRotuloPreview();
+  loadRotulosGuardados(id);
   document.getElementById('modalRotulo').classList.add('open');
+}
+
+// ===== DOCUMENTO / BULTO =====
+function getDocInfo() {
+  const tipoDoc    = document.getElementById('rotuloTipoDoc')?.value || '';
+  const numDoc     = document.getElementById('rotuloNumDoc')?.value.trim() || '';
+  const bultoN     = document.getElementById('rotuloBultoN')?.value || '';
+  const bultoTotal = document.getElementById('rotuloBultoTotal')?.value || '';
+  return { tipoDoc, numDoc, bultoN, bultoTotal };
+}
+
+function slugifyProv(nombre, id) {
+  const slug = String(nombre || 'proveedor')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
+  return `${slug}_${String(id).slice(0, 8)}`;
+}
+
+// ===== HISTORIAL DE RÓTULOS GUARDADOS =====
+export async function loadRotulosGuardados(provId) {
+  const listEl = document.getElementById('rotulosGuardadosList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Cargando...</div>';
+  try {
+    const rows = await sbFetch(`/rotulos_generados?proveedor_id=eq.${provId}&select=*&order=created_at.desc&limit=15`);
+    if (!rows.length) {
+      listEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Todavía no hay rótulos guardados para este proveedor.</div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(r => {
+      const fecha  = new Date(r.created_at).toLocaleDateString('es-AR');
+      const docTxt = r.tipo_documento ? `${r.tipo_documento === 'remito' ? 'Remito' : 'Nota de despacho'} ${r.numero_documento || ''}`.trim() : '';
+      const bulto  = r.bulto_actual && r.bulto_total ? `Bulto ${r.bulto_actual}/${r.bulto_total}` : '';
+      const label  = [docTxt, bulto].filter(Boolean).join(' — ') || 'Rótulo';
+      const url    = `${SUPABASE_URL}/storage/v1/object/public/rotulos/${r.storage_path}`;
+      return `<div style="display:flex;align-items:center;gap:4px;border-radius:6px;background:var(--surface2)">
+        <a href="${url}" target="_blank" rel="noopener" style="flex:1;display:flex;justify-content:space-between;gap:8px;padding:6px 8px;font-size:12px;text-decoration:none;color:var(--text);min-width:0">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(label)}</span>
+          <span style="color:var(--text-muted);white-space:nowrap">${fecha}</span>
+        </a>
+        <button type="button" onclick="deleteRotuloGuardado('${r.id}','${r.storage_path}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:6px 8px;font-size:13px;line-height:1">🗑️</button>
+      </div>`;
+    }).join('');
+  } catch {
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--danger)">Error al cargar el historial.</div>';
+  }
+}
+
+export async function deleteRotuloGuardado(id, storagePath) {
+  if (!confirm('¿Eliminar este rótulo guardado? Esta acción no se puede deshacer.')) return;
+  try {
+    await sbFetch(`/rotulos_generados?id=eq.${id}`, { method: 'DELETE' });
+    try { await sbStorageDelete(storagePath); } catch {}
+    toast('Rótulo eliminado', 'error');
+    loadRotulosGuardados(state.rotuloProvId);
+  } catch {
+    toast('Error al eliminar', 'error');
+  }
 }
 
 export function selectSize(btn, name) {
@@ -216,9 +281,12 @@ function esc(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-export function renderRotuloPreviewTo(targetId, rd, pData, pContactsData, detalleText, extraText) {
+export function renderRotuloPreviewTo(targetId, rd, pData, pContactsData, detalleText, extraText, docInfo = {}) {
   const el = document.getElementById(targetId);
   if (!el) return;
+  const { tipoDoc = '', numDoc = '', bultoN = '', bultoTotal = '' } = docInfo;
+  const docLabel   = tipoDoc && numDoc ? `${tipoDoc === 'remito' ? 'Remito' : 'Nota de despacho'} N°: ${numDoc}` : '';
+  const bultoLabel = bultoN && bultoTotal ? `Bulto: ${bultoN}/${bultoTotal}` : '';
 
   const campos  = state.configData.rotulo_campos || { horario: true, direccion: true, telefono: true };
   const pie     = state.configData.rotulo_pie    || '';
@@ -249,6 +317,8 @@ export function renderRotuloPreviewTo(targetId, rd, pData, pContactsData, detall
         ${campos.direccion && pData.direccion ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Dirección:</strong> ${esc([pData.direccion, pData.localidad, pData.provincia, pData.codigo_postal ? 'CP ' + pData.codigo_postal : ''].filter(Boolean).join(', '))}</div>` : ''}
         ${campos.horario   && pData.horario   ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Horario:</strong> ${esc(pData.horario)}</div>` : ''}
         ${contact && campos.telefono && (contact.telefono || contact.celular) ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Contacto:</strong> ${esc(contact.nombre)}${contact.cargo ? ' (' + esc(contact.cargo) + ')' : ''}${contact.telefono ? ' — ' + esc(contact.telefono) : ''}${contact.celular ? ' / ' + esc(contact.celular) : ''}</div>` : ''}
+        ${docLabel   ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(docLabel)}</strong></div>` : ''}
+        ${bultoLabel ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(bultoLabel)}</strong></div>` : ''}
         ${extraText  ? `<div style="font-size:12px;font-weight:bold;color:${rd.barColor};margin-bottom:4px">⚠ ${esc(extraText)}</div>` : ''}
         ${detalleText ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #ddd"><div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:bold;margin-bottom:3px">Detalle</div><div style="font-size:12px;color:${rd.textColor};white-space:pre-wrap">${esc(detalleText)}</div></div>` : ''}
       </div>
@@ -265,7 +335,8 @@ export function renderRotuloPreview() {
   const pContacts = state.contactos.filter(c => c.proveedor_id === p.id);
   renderRotuloPreviewTo('rotuloPreview', getCurrentDesign(), p, pContacts,
     document.getElementById('rotuloDetalle').value,
-    document.getElementById('rotuloExtra').value);
+    document.getElementById('rotuloExtra').value,
+    getDocInfo());
 }
 
 // ===== PDF =====
@@ -273,7 +344,7 @@ function hexRgb(hex) {
   return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
 }
 
-function buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, w, h) {
+function buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, w, h, docInfo = {}) {
   const isSmall  = w <= 110 && h <= 80;
   const margin   = isSmall ? 4 : 14;
   const contentW = w - margin * 2;
@@ -346,6 +417,10 @@ function buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, l
     addLine('Contacto', `${contact.nombre}${contact.cargo ? ' (' + contact.cargo + ')' : ''}${contact.telefono ? ' — ' + contact.telefono : ''}${contact.celular ? ' / ' + contact.celular : ''}`);
   }
 
+  const { tipoDoc = '', numDoc = '', bultoN = '', bultoTotal = '' } = docInfo;
+  if (tipoDoc && numDoc) addLine(tipoDoc === 'remito' ? 'Remito N°' : 'N° Desp.', numDoc);
+  if (bultoN && bultoTotal) addLine('Bulto', `${bultoN}/${bultoTotal}`);
+
   if (extra) {
     const [br, bg, bb] = hexRgb(rd.barColor);
     doc.setTextColor(br, bg, bb); doc.setFont('helvetica', 'bold');
@@ -393,22 +468,45 @@ function getPDFContext() {
     empresa:   state.configData.empresa_nombre || 'Cremac',
     logo:      state.logoBase64 || state.configData.logo_base64 || '',
     fecha:     new Date().toLocaleDateString('es-AR'),
+    docInfo:   getDocInfo(),
   };
 }
 
-export function generatePDF() {
+export async function generatePDF() {
   const ctx = getPDFContext();
   if (!ctx) return;
-  const { p, doc, rd, w, h, pContacts, campos, detalle, extra, pie, empresa, logo, fecha } = ctx;
-  buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, w, h);
+  const { p, doc, rd, w, h, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, docInfo } = ctx;
+  buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, w, h, docInfo);
   doc.save(`rotulo_${p.nombre.replace(/\s+/g, '_')}_${w}x${h}mm.pdf`);
   toast('PDF generado', 'success');
+
+  try {
+    const blob = doc.output('blob');
+    const path = `${slugifyProv(p.nombre, p.id)}/${Date.now()}_${w}x${h}mm.pdf`;
+    await sbStorageUpload(path, blob);
+    await sbFetch('/rotulos_generados', {
+      method: 'POST',
+      body: JSON.stringify({
+        proveedor_id:     p.id,
+        tipo_documento:   docInfo.tipoDoc || null,
+        numero_documento: docInfo.numDoc  || null,
+        bulto_actual:     docInfo.bultoN     ? parseInt(docInfo.bultoN)     : null,
+        bulto_total:      docInfo.bultoTotal ? parseInt(docInfo.bultoTotal) : null,
+        storage_path:     path,
+        creado_por:       state.currentUser?.id || null,
+      }),
+    });
+    loadRotulosGuardados(p.id);
+    toast('Guardado en la carpeta del proveedor', 'success');
+  } catch (e) {
+    toast('El PDF se descargó, pero no se pudo guardar en el historial: ' + e.message, 'error');
+  }
 }
 
 export function previewPDF() {
   const ctx = getPDFContext();
   if (!ctx) return;
-  const { p, doc, rd, w, h, pContacts, campos, detalle, extra, pie, empresa, logo, fecha } = ctx;
-  buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, w, h);
+  const { p, doc, rd, w, h, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, docInfo } = ctx;
+  buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, w, h, docInfo);
   window.open(doc.output('bloburl'), '_blank');
 }
