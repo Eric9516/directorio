@@ -11,6 +11,8 @@ export const state = {
   logoBase64: '',
   currentProvId: null,
   rotuloProvId: null,
+  rotuloGuardadoActual: null,
+  rotuloEditando: null,
   editingUserId: null,
   editingProvId: null,
   editingComId: null,

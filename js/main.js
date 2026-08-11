@@ -13,9 +13,10 @@ import { loadUsers, openUserModal, saveUser, toggleUserActivo,
          addCampoCustomRow, removeCampoCustomRow, saveCamposCustom } from './admin.js';
 import { openRotulo, selectSize, selectDesignSize, updateAdminPreview,
          saveRotuloDesignFromAdmin, resetRotuloDesign, onCustomSizeInput,
-         renderRotuloPreview, generatePDF, previewPDF,
-         openModalRotuloDesign, toggleRotuloCampo,
-         deleteRotuloGuardado }                                      from './rotulo.js';
+         renderRotuloPreview, guardarRotulo, descargarRotuloGuardado,
+         vistaPreviaRotuloGuardado, openModalRotuloDesign, toggleRotuloCampo,
+         deleteRotuloGuardado, editRotuloGuardado, verVersionesRotulo,
+         loadRotulosScreen, renderRotulosScreen }                    from './rotulo.js';
 import { loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
          openTaskDetail, completeTask, cancelTask,
          openReprogramModal, saveReprogram,
@@ -176,9 +177,11 @@ function showTab(tab) {
   document.getElementById('mm-' + tab)?.classList.add('active');
   document.getElementById('paneProveedores').style.display   = tab === 'proveedores'   ? 'block' : 'none';
   document.getElementById('paneComisionistas').style.display = tab === 'comisionistas' ? 'block' : 'none';
+  document.getElementById('paneRotulos').style.display       = tab === 'rotulos'       ? 'block' : 'none';
   document.getElementById('paneAdmin').style.display         = tab === 'admin'         ? 'block' : 'none';
   if (tab === 'admin')         loadUsers();
   if (tab === 'comisionistas') loadComisionistas();
+  if (tab === 'rotulos')       loadRotulosScreen();
 }
 
 // ===== ANIMACION DE FONDO (LOGIN) =====
@@ -252,8 +255,10 @@ Object.assign(window, {
   // Rotulo
   openRotulo, selectSize, selectDesignSize, updateAdminPreview,
   saveRotuloDesignFromAdmin, resetRotuloDesign, onCustomSizeInput,
-  renderRotuloPreview, generatePDF, previewPDF, openModalRotuloDesign, toggleRotuloCampo,
-  deleteRotuloGuardado,
+  renderRotuloPreview, guardarRotulo, descargarRotuloGuardado, vistaPreviaRotuloGuardado,
+  openModalRotuloDesign, toggleRotuloCampo,
+  deleteRotuloGuardado, editRotuloGuardado, verVersionesRotulo,
+  loadRotulosScreen, renderRotulosScreen,
   // Tareas
   loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
   openTaskDetail, completeTask, cancelTask,
