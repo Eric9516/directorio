@@ -472,14 +472,7 @@ function getPDFContext() {
   };
 }
 
-export async function generatePDF() {
-  const ctx = getPDFContext();
-  if (!ctx) return;
-  const { p, doc, rd, w, h, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, docInfo } = ctx;
-  buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, w, h, docInfo);
-  doc.save(`rotulo_${p.nombre.replace(/\s+/g, '_')}_${w}x${h}mm.pdf`);
-  toast('PDF generado', 'success');
-
+async function saveRotuloToHistory(p, doc, w, h, docInfo, failMsgPrefix) {
   try {
     const blob = doc.output('blob');
     const path = `${slugifyProv(p.nombre, p.id)}/${Date.now()}_${w}x${h}mm.pdf`;
@@ -499,14 +492,25 @@ export async function generatePDF() {
     loadRotulosGuardados(p.id);
     toast('Guardado en la carpeta del proveedor', 'success');
   } catch (e) {
-    toast('El PDF se descargó, pero no se pudo guardar en el historial: ' + e.message, 'error');
+    toast(failMsgPrefix + ' no se pudo guardar en el historial: ' + e.message, 'error');
   }
 }
 
-export function previewPDF() {
+export async function generatePDF() {
+  const ctx = getPDFContext();
+  if (!ctx) return;
+  const { p, doc, rd, w, h, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, docInfo } = ctx;
+  buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, w, h, docInfo);
+  doc.save(`rotulo_${p.nombre.replace(/\s+/g, '_')}_${w}x${h}mm.pdf`);
+  toast('PDF generado', 'success');
+  await saveRotuloToHistory(p, doc, w, h, docInfo, 'El PDF se descargó, pero');
+}
+
+export async function previewPDF() {
   const ctx = getPDFContext();
   if (!ctx) return;
   const { p, doc, rd, w, h, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, docInfo } = ctx;
   buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, w, h, docInfo);
   window.open(doc.output('bloburl'), '_blank');
+  await saveRotuloToHistory(p, doc, w, h, docInfo, 'Se abrió la vista previa, pero');
 }
