@@ -16,7 +16,8 @@ import { openRotulo, selectSize, selectDesignSize, updateAdminPreview,
          renderRotuloPreview, guardarRotulo, descargarRotuloGuardado,
          vistaPreviaRotuloGuardado, openModalRotuloDesign, toggleRotuloCampo,
          deleteRotuloGuardado, editRotuloGuardado, verVersionesRotulo,
-         loadRotulosScreen, renderRotulosScreen }                    from './rotulo.js';
+         loadRotulosScreen, renderRotulosScreen,
+         abrirFotosRotulo, handleRotuloFotosUpload, deleteRotuloFoto }  from './rotulo.js';
 import { loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
          openTaskDetail, completeTask, cancelTask,
          openReprogramModal, saveReprogram,
@@ -259,6 +260,7 @@ Object.assign(window, {
   openModalRotuloDesign, toggleRotuloCampo,
   deleteRotuloGuardado, editRotuloGuardado, verVersionesRotulo,
   loadRotulosScreen, renderRotulosScreen,
+  abrirFotosRotulo, handleRotuloFotosUpload, deleteRotuloFoto,
   // Tareas
   loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
   openTaskDetail, completeTask, cancelTask,

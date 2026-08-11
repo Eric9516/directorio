@@ -185,8 +185,8 @@
   .prov-card-name { font-size: 15px; font-weight: 700; color: var(--blue); flex: 1; margin-right: 8px; }
   .prov-card-body { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
   .prov-card-row { font-size: 13px; color: var(--text-mid); display: flex; gap: 6px; align-items: flex-start; }
-  .prov-card-actions { display: flex; gap: 6px; border-top: 1px solid var(--border); padding-top: 10px; }
-  .prov-card-actions .btn { flex: 1; justify-content: center; font-size: 12px; padding: 8px 4px; }
+  .prov-card-actions { display: flex; flex-wrap: wrap; gap: 6px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .prov-card-actions .btn { flex: 1 1 auto; min-width: 40%; justify-content: center; font-size: 12px; padding: 8px 4px; }
 }
 
 /* ===== RÓTULO MODAL MOBILE (bottom sheet) ===== */

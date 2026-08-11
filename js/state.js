@@ -13,6 +13,8 @@ export const state = {
   rotuloProvId: null,
   rotuloGuardadoActual: null,
   rotuloEditando: null,
+  rotuloFotosGrupoId: null,
+  rotuloFotosProvId: null,
   editingUserId: null,
   editingProvId: null,
   editingComId: null,

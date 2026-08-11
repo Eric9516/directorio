@@ -304,6 +304,10 @@ function rotuloLabel(r) {
   return [docTxt, bulto].filter(Boolean).join(' — ') || 'Rótulo';
 }
 
+function rotuloFotoBoton(r) {
+  return `<button type="button" onclick="abrirFotosRotulo('${r.grupo_id}','${r.proveedor_id}')" title="Fotos del envío" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:6px;font-size:13px;line-height:1">📷</button>`;
+}
+
 function rotuloAdminBotones(r) {
   if (!state.isAdmin) return '';
   const versionesBtn = r.version > 1
@@ -333,6 +337,7 @@ export async function loadRotulosGuardados(provId) {
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(label)}</span>
           <span style="color:var(--text-muted);white-space:nowrap">${fecha}</span>
         </a>
+        ${rotuloFotoBoton(r)}
         ${rotuloAdminBotones(r)}
       </div>`;
     }).join('');
@@ -602,10 +607,12 @@ export async function guardarRotulo() {
     };
 
     if (editando) {
+      const siblings   = await sbFetch(`/rotulos_generados?grupo_id=eq.${editando.grupoId}&select=version`);
+      const maxVersion = siblings.reduce((m, s) => Math.max(m, s.version), 0);
       payload.grupo_id       = editando.grupoId;
-      payload.version        = editando.version + 1;
+      payload.version        = maxVersion + 1;
       payload.motivo_edicion = motivo;
-      await sbFetch(`/rotulos_generados?id=eq.${editando.prevId}`, { method: 'PATCH', body: JSON.stringify({ vigente: false }) });
+      await sbFetch(`/rotulos_generados?grupo_id=eq.${editando.grupoId}&vigente=eq.true`, { method: 'PATCH', body: JSON.stringify({ vigente: false }) });
     } else {
       payload.grupo_id = crypto.randomUUID();
       payload.version  = 1;
@@ -618,6 +625,7 @@ export async function guardarRotulo() {
     document.getElementById('btnDescargarRotulo').style.display = '';
     document.getElementById('btnVistaPreviaRotulo').style.display = '';
     loadRotulosGuardados(p.id);
+    if (document.getElementById('paneRotulos')?.style.display !== 'none') loadRotulosScreen();
     toast('Rótulo guardado', 'success');
   } catch (e) {
     toast('No se pudo guardar: ' + e.message, 'error');
@@ -668,6 +676,7 @@ export async function loadRotulosScreen() {
 
 export function renderRotulosScreen() {
   const tbody = document.getElementById('rotulosTableBody');
+  const cards = document.getElementById('rotulosCards');
   if (!tbody) return;
 
   const numDoc  = document.getElementById('rotSearchNumDoc')?.value.trim().toLowerCase() || '';
@@ -687,21 +696,26 @@ export function renderRotulosScreen() {
   });
 
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No hay rótulos que coincidan con el filtro.</td></tr>';
+    const emptyMsg = '<div class="empty-state"><div class="empty-icon">🏷️</div><h3>Sin rótulos</h3><p>No hay rótulos que coincidan con el filtro.</p></div>';
+    tbody.innerHTML = `<tr><td colspan="6">${emptyMsg}</td></tr>`;
+    if (cards) cards.innerHTML = emptyMsg;
     return;
   }
 
-  tbody.innerHTML = filtered.map(r => {
-    const prov   = state.proveedores.find(p => p.id === r.proveedor_id);
-    const fecha  = new Date(r.created_at).toLocaleDateString('es-AR');
-    const doc    = r.tipo_documento ? `${r.tipo_documento === 'remito' ? 'Remito' : 'Nota de despacho'} ${r.numero_documento || ''}`.trim() : '—';
-    const bulto  = r.bulto_actual && r.bulto_total ? `${r.bulto_actual}/${r.bulto_total}` : '—';
-    const url    = `${SUPABASE_URL}/storage/v1/object/public/rotulos/${r.storage_path}`;
+  const rowsData = filtered.map(r => {
+    const prov  = state.proveedores.find(p => p.id === r.proveedor_id);
+    const fecha = new Date(r.created_at).toLocaleDateString('es-AR');
+    const doc   = r.tipo_documento ? `${r.tipo_documento === 'remito' ? 'Remito' : 'Nota de despacho'} ${r.numero_documento || ''}`.trim() : '—';
+    const bulto = r.bulto_actual && r.bulto_total ? `${r.bulto_actual}/${r.bulto_total}` : '—';
+    const url   = `${SUPABASE_URL}/storage/v1/object/public/rotulos/${r.storage_path}`;
     const adminBtns = state.isAdmin ? `
       ${r.version > 1 ? `<button class="btn btn-ghost btn-sm btn-icon" title="Historial de versiones" onclick="verVersionesRotulo('${r.grupo_id}')">🕘</button>` : ''}
       <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="editRotuloGuardado('${r.id}')">✏️</button>
       <button class="btn btn-ghost btn-sm btn-icon" title="Eliminar" onclick="deleteRotuloGuardado('${r.grupo_id}')">🗑️</button>` : '';
-    return `<tr>
+    return { r, prov, fecha, doc, bulto, url, adminBtns };
+  });
+
+  tbody.innerHTML = rowsData.map(({ r, prov, fecha, doc, bulto, url, adminBtns }) => `<tr>
       <td>${esc(prov?.nombre || '(proveedor eliminado)')}</td>
       <td>${esc(doc)}${r.version > 1 ? ` <span class="badge badge-rubro">v${r.version}</span>` : ''}</td>
       <td>${esc(bulto)}</td>
@@ -709,8 +723,142 @@ export function renderRotulosScreen() {
       <td>${fecha}</td>
       <td><div class="td-actions">
         <a class="btn btn-ghost btn-sm" href="${url}" target="_blank" rel="noopener">Ver PDF</a>
+        <button class="btn btn-ghost btn-sm btn-icon" title="Fotos del envío" onclick="abrirFotosRotulo('${r.grupo_id}','${r.proveedor_id}')">📷</button>
         ${adminBtns}
       </div></td>
-    </tr>`;
-  }).join('');
+    </tr>`).join('');
+
+  if (cards) {
+    cards.innerHTML = rowsData.map(({ r, prov, fecha, doc, bulto, url, adminBtns }) => `<div class="prov-card">
+      <div class="prov-card-header">
+        <div><div class="prov-card-name">${esc(prov?.nombre || '(proveedor eliminado)')}</div>${r.version > 1 ? `<span class="badge badge-rubro" style="margin-top:4px;display:inline-flex">v${r.version}</span>` : ''}</div>
+        <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${fecha}</span>
+      </div>
+      <div class="prov-card-body">
+        <div class="prov-card-row">📄 ${esc(doc)}</div>
+        ${bulto !== '—' ? `<div class="prov-card-row">📦 Bulto ${esc(bulto)}</div>` : ''}
+      </div>
+      <div class="prov-card-actions">
+        <a class="btn btn-ghost btn-sm" href="${url}" target="_blank" rel="noopener">📄 Ver PDF</a>
+        <button class="btn btn-ghost btn-sm" onclick="abrirFotosRotulo('${r.grupo_id}','${r.proveedor_id}')">📷 Fotos</button>
+        ${state.isAdmin ? `
+        ${r.version > 1 ? `<button class="btn btn-ghost btn-sm" onclick="verVersionesRotulo('${r.grupo_id}')">🕘 Historial</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="editRotuloGuardado('${r.id}')">✏️ Editar</button>
+        <button class="btn btn-danger-ghost btn-sm" onclick="deleteRotuloGuardado('${r.grupo_id}')">🗑 Borrar</button>` : ''}
+      </div>
+    </div>`).join('');
+  }
+}
+
+// ===== FOTOS DE COMPROBANTE =====
+const MAX_FOTOS_ROTULO = 5;
+
+function compressImage(file, maxDim = 1600, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const ratio = Math.min(maxDim / width, maxDim / height);
+        width  = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('No se pudo procesar la imagen')), 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen')); };
+    img.src = url;
+  });
+}
+
+export async function abrirFotosRotulo(grupoId, proveedorId) {
+  state.rotuloFotosGrupoId = grupoId;
+  state.rotuloFotosProvId  = proveedorId;
+  document.getElementById('rotuloFotosInput').value = '';
+  document.getElementById('rotuloFotosStatus').textContent = '';
+  document.getElementById('modalRotuloFotos').classList.add('open');
+  await loadRotuloFotos(grupoId);
+}
+
+async function loadRotuloFotos(grupoId) {
+  const grid = document.getElementById('rotuloFotosGrid');
+  grid.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Cargando...</div>';
+  try {
+    const rows = await sbFetch(`/rotulos_fotos?grupo_id=eq.${grupoId}&select=*&order=created_at.asc`);
+    if (!rows.length) {
+      grid.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Todavía no hay fotos para este rótulo.</div>';
+    } else {
+      grid.innerHTML = rows.map(f => {
+        const url = `${SUPABASE_URL}/storage/v1/object/public/rotulos/${f.storage_path}`;
+        return `<div style="position:relative;width:90px;height:90px">
+          <a href="${url}" target="_blank" rel="noopener">
+            <img src="${url}" style="width:90px;height:90px;object-fit:cover;border-radius:8px;border:1.5px solid var(--border)">
+          </a>
+          <button type="button" onclick="deleteRotuloFoto('${f.id}','${f.storage_path}')" title="Eliminar foto" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:var(--danger);color:white;border:none;cursor:pointer;font-size:12px;line-height:1">✕</button>
+        </div>`;
+      }).join('');
+    }
+    const status = document.getElementById('rotuloFotosStatus');
+    status.textContent = `${rows.length}/${MAX_FOTOS_ROTULO} fotos`;
+    document.getElementById('rotuloFotosInput').disabled = rows.length >= MAX_FOTOS_ROTULO;
+  } catch {
+    grid.innerHTML = '<div style="font-size:12px;color:var(--danger)">Error al cargar las fotos.</div>';
+  }
+}
+
+export async function handleRotuloFotosUpload(event) {
+  const files    = Array.from(event.target.files || []);
+  const grupoId  = state.rotuloFotosGrupoId;
+  const provId   = state.rotuloFotosProvId;
+  if (!files.length || !grupoId) return;
+
+  const status = document.getElementById('rotuloFotosStatus');
+  const existentes = await sbFetch(`/rotulos_fotos?grupo_id=eq.${grupoId}&select=id`);
+  const disponibles = MAX_FOTOS_ROTULO - existentes.length;
+  if (disponibles <= 0) {
+    status.textContent = `Ya llegaste al máximo de ${MAX_FOTOS_ROTULO} fotos.`;
+    event.target.value = '';
+    return;
+  }
+
+  const prov = state.proveedores.find(p => p.id === provId);
+  const aSubir = files.slice(0, disponibles);
+
+  for (let i = 0; i < aSubir.length; i++) {
+    status.textContent = `Subiendo foto ${i + 1}/${aSubir.length}...`;
+    try {
+      const blob = await compressImage(aSubir[i]);
+      const path = `${slugifyProv(prov?.nombre, provId)}/fotos/${Date.now()}_${i}.jpg`;
+      await sbStorageUpload(path, blob, 'image/jpeg');
+      await sbFetch('/rotulos_fotos', {
+        method: 'POST',
+        body: JSON.stringify({
+          grupo_id:     grupoId,
+          proveedor_id: provId,
+          storage_path: path,
+          creado_por:   state.currentUser?.id || null,
+        }),
+      });
+    } catch (e) {
+      toast('Error al subir una foto: ' + e.message, 'error');
+    }
+  }
+
+  event.target.value = '';
+  await loadRotuloFotos(grupoId);
+}
+
+export async function deleteRotuloFoto(id, storagePath) {
+  if (!confirm('¿Eliminar esta foto?')) return;
+  try {
+    await sbFetch(`/rotulos_fotos?id=eq.${id}`, { method: 'DELETE' });
+    try { await sbStorageDelete(storagePath); } catch {}
+    await loadRotuloFotos(state.rotuloFotosGrupoId);
+  } catch {
+    toast('Error al eliminar la foto', 'error');
+  }
 }
