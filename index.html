@@ -625,6 +625,10 @@
           </div>
         </div>
         <div class="form-group">
+          <label>Valor declarado (opcional)</label>
+          <input type="text" id="rotuloValorDeclarado" placeholder="Ej: $150.000" oninput="renderRotuloPreview()">
+        </div>
+        <div class="form-group">
           <label>¿Cuántos bultos tiene este envío?</label>
           <input type="number" id="rotuloBultoTotal" min="1" value="1" oninput="onBultoTotalChange()" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text)">
           <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Se genera un PDF distinto por cada bulto, cada uno con su propia descripción.</div>

@@ -193,6 +193,7 @@ export function openRotulo(id) {
   document.getElementById('rotuloExtra').value   = '';
   document.getElementById('rotuloTipoDoc').value    = '';
   document.getElementById('rotuloNumDoc').value     = '';
+  document.getElementById('rotuloValorDeclarado').value = '';
   document.getElementById('rotuloBultoTotal').value = '1';
   document.getElementById('rotuloMotivoEdicion').value = '';
   document.getElementById('rotuloMotivoWrap').style.display = 'none';
@@ -256,6 +257,7 @@ export async function editRotuloGuardado(id) {
     document.getElementById('rotuloExtra').value          = r.extra || '';
     document.getElementById('rotuloTipoDoc').value        = r.tipo_documento || '';
     document.getElementById('rotuloNumDoc').value         = r.numero_documento || '';
+    document.getElementById('rotuloValorDeclarado').value = r.valor_declarado || '';
     document.getElementById('rotuloBultoTotal').value     = bultos.length || r.bulto_total || 1;
     document.getElementById('rotuloMotivoEdicion').value  = '';
     document.getElementById('rotuloMotivoWrap').style.display = 'block';
@@ -322,10 +324,11 @@ export async function abrirBultosRotulo(rotuloId) {
 
 // ===== DOCUMENTO =====
 function getDocInfo() {
-  const tipoDoc    = document.getElementById('rotuloTipoDoc')?.value || '';
-  const numDoc     = document.getElementById('rotuloNumDoc')?.value.trim() || '';
-  const bultoTotal = document.getElementById('rotuloBultoTotal')?.value || '1';
-  return { tipoDoc, numDoc, bultoTotal };
+  const tipoDoc        = document.getElementById('rotuloTipoDoc')?.value || '';
+  const numDoc         = document.getElementById('rotuloNumDoc')?.value.trim() || '';
+  const valorDeclarado = document.getElementById('rotuloValorDeclarado')?.value.trim() || '';
+  const bultoTotal     = document.getElementById('rotuloBultoTotal')?.value || '1';
+  return { tipoDoc, numDoc, valorDeclarado, bultoTotal };
 }
 
 function slugifyProv(nombre, id) {
@@ -372,8 +375,9 @@ function esc(str) {
 export function renderRotuloPreviewTo(targetId, rd, pData, pContactsData, detalleText, extraText, docInfo = {}) {
   const el = document.getElementById(targetId);
   if (!el) return;
-  const { tipoDoc = '', numDoc = '', bultoN = '', bultoTotal = '' } = docInfo;
+  const { tipoDoc = '', numDoc = '', valorDeclarado = '', bultoN = '', bultoTotal = '' } = docInfo;
   const docLabel   = tipoDoc && numDoc ? `${tipoDoc === 'remito' ? 'Remito' : 'Nota de despacho'} N°: ${numDoc}` : '';
+  const valorLabel = valorDeclarado ? `Valor declarado: ${valorDeclarado}` : '';
   const bultoLabel = bultoN && bultoTotal ? `Bulto: ${bultoN}/${bultoTotal}` : '';
 
   const campos  = state.configData.rotulo_campos || { horario: true, direccion: true, telefono: true };
@@ -406,6 +410,7 @@ export function renderRotuloPreviewTo(targetId, rd, pData, pContactsData, detall
         ${campos.horario   && pData.horario   ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Horario:</strong> ${esc(pData.horario)}</div>` : ''}
         ${contact && campos.telefono && (contact.telefono || contact.celular) ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Contacto:</strong> ${esc(contact.nombre)}${contact.cargo ? ' (' + esc(contact.cargo) + ')' : ''}${contact.telefono ? ' — ' + esc(contact.telefono) : ''}${contact.celular ? ' / ' + esc(contact.celular) : ''}</div>` : ''}
         ${docLabel   ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(docLabel)}</strong></div>` : ''}
+        ${valorLabel ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(valorLabel)}</strong></div>` : ''}
         ${bultoLabel ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(bultoLabel)}</strong></div>` : ''}
         ${extraText  ? `<div style="font-size:12px;font-weight:bold;color:${rd.barColor};margin-bottom:4px">⚠ ${esc(extraText)}</div>` : ''}
         ${detalleText ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #ddd"><div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:bold;margin-bottom:3px">Detalle</div><div style="font-size:12px;color:${rd.textColor};white-space:pre-wrap">${esc(detalleText)}</div></div>` : ''}
@@ -509,8 +514,9 @@ function buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, l
     addLine('Contacto', `${contact.nombre}${contact.cargo ? ' (' + contact.cargo + ')' : ''}${contact.telefono ? ' — ' + contact.telefono : ''}${contact.celular ? ' / ' + contact.celular : ''}`);
   }
 
-  const { tipoDoc = '', numDoc = '', bultoN = '', bultoTotal = '' } = docInfo;
+  const { tipoDoc = '', numDoc = '', valorDeclarado = '', bultoN = '', bultoTotal = '' } = docInfo;
   if (tipoDoc && numDoc) addLine(tipoDoc === 'remito' ? 'Remito N°' : 'Nota de despacho N°', numDoc);
+  if (valorDeclarado) addLine('Valor declarado', valorDeclarado);
   if (bultoN && bultoTotal) addLine('Bulto', `${bultoN}/${bultoTotal}`);
 
   if (extra) {
@@ -591,6 +597,7 @@ export async function guardarRotulo() {
       proveedor_id:     p.id,
       tipo_documento:   docInfo.tipoDoc || null,
       numero_documento: docInfo.numDoc  || null,
+      valor_declarado:  docInfo.valorDeclarado || null,
       bulto_total:      total,
       extra:            extra || null,
       ancho_mm:         w,
