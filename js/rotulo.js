@@ -206,7 +206,6 @@ export function openRotulo(id) {
   if (wEl) wEl.value = '21';
   if (hEl) hEl.value = '29.7';
   renderRotuloPreview();
-  loadRotulosGuardados(id);
   document.getElementById('modalRotulo').classList.add('open');
 }
 
@@ -270,7 +269,6 @@ export async function editRotuloGuardado(id) {
     if (hEl) hEl.value = r.alto_mm  ? r.alto_mm  / 10 : 29.7;
 
     renderRotuloPreview();
-    loadRotulosGuardados(r.proveedor_id);
     document.getElementById('modalRotulo').classList.add('open');
   } catch {
     toast('No se pudo cargar el rótulo para editar', 'error');
@@ -339,56 +337,8 @@ function slugifyProv(nombre, id) {
   return `${slug}_${String(id).slice(0, 8)}`;
 }
 
-// ===== HISTORIAL DE RÓTULOS GUARDADOS =====
-function rotuloLabel(r) {
-  const docTxt = r.tipo_documento ? `${r.tipo_documento === 'remito' ? 'Remito' : 'Nota de despacho'} ${r.numero_documento || ''}`.trim() : '';
-  const bultos = r.bulto_total > 1 ? `${r.bulto_total} bultos` : '';
-  return [docTxt, bultos].filter(Boolean).join(' — ') || 'Rótulo';
-}
-
-function rotuloFotoBoton(r) {
-  return `<button type="button" onclick="abrirFotosRotulo('${r.grupo_id}','${r.proveedor_id}')" title="Fotos del envío" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:6px;font-size:13px;line-height:1">📷</button>`;
-}
-
-function rotuloAdminBotones(r) {
-  if (!state.isAdmin) return '';
-  const versionesBtn = r.version > 1
-    ? `<button type="button" onclick="verVersionesRotulo('${r.grupo_id}')" title="Historial de versiones" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:6px;font-size:13px;line-height:1">🕘</button>`
-    : '';
-  return `${versionesBtn}
-    <button type="button" onclick="editRotuloGuardado('${r.id}')" title="Editar" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:6px;font-size:13px;line-height:1">✏️</button>
-    <button type="button" onclick="deleteRotuloGuardado('${r.grupo_id}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:6px;font-size:13px;line-height:1">🗑️</button>`;
-}
-
-export async function loadRotulosGuardados(provId) {
-  const listEl = document.getElementById('rotulosGuardadosList');
-  if (!listEl) return;
-  listEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Cargando...</div>';
-  try {
-    const rows = await sbFetch(`/rotulos_generados?proveedor_id=eq.${provId}&vigente=eq.true&select=*&order=created_at.desc&limit=15`);
-    if (!rows.length) {
-      listEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Todavía no hay rótulos guardados para este proveedor.</div>';
-      return;
-    }
-    listEl.innerHTML = rows.map(r => {
-      const fecha = new Date(r.created_at).toLocaleDateString('es-AR');
-      const label = rotuloLabel(r) + (r.version > 1 ? ` (v${r.version})` : '');
-      return `<div style="display:flex;align-items:center;gap:2px;border-radius:6px;background:var(--surface2)">
-        <button type="button" onclick="abrirBultosRotulo('${r.id}')" style="flex:1;display:flex;justify-content:space-between;gap:8px;padding:6px 8px;font-size:12px;background:none;border:none;text-align:left;cursor:pointer;color:var(--text);min-width:0">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(label)}</span>
-          <span style="color:var(--text-muted);white-space:nowrap">${fecha}</span>
-        </button>
-        ${rotuloFotoBoton(r)}
-        ${rotuloAdminBotones(r)}
-      </div>`;
-    }).join('');
-  } catch {
-    listEl.innerHTML = '<div style="font-size:12px;color:var(--danger)">Error al cargar el historial.</div>';
-  }
-}
-
 export async function deleteRotuloGuardado(grupoId) {
-  if (!confirm('¿Eliminar este rótulo y todo su historial de versiones? Esta acción no se puede deshacer.')) return;
+  if (!confirm('¿Eliminar este envío y todo su historial de versiones? Esta acción no se puede deshacer.')) return;
   try {
     const versiones   = await sbFetch(`/rotulos_generados?grupo_id=eq.${grupoId}&select=id`);
     const versionIds  = versiones.map(v => v.id);
@@ -397,8 +347,7 @@ export async function deleteRotuloGuardado(grupoId) {
       : [];
     await sbFetch(`/rotulos_generados?grupo_id=eq.${grupoId}`, { method: 'DELETE' });
     await Promise.all(bultos.map(b => sbStorageDelete(b.storage_path).catch(() => {})));
-    toast('Rótulo eliminado', 'error');
-    if (state.rotuloProvId) loadRotulosGuardados(state.rotuloProvId);
+    toast('Envío eliminado', 'error');
     if (document.getElementById('paneRotulos')?.style.display !== 'none') loadRotulosScreen();
   } catch {
     toast('Error al eliminar', 'error');
@@ -542,10 +491,12 @@ function buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, l
   const addLine = (label, value) => {
     if (!value) return;
     doc.setTextColor(100, 100, 100); doc.setFont('helvetica', 'bold');
-    doc.text(label + ':', margin, y);
+    const labelText = label + ':';
+    doc.text(labelText, margin, y);
+    const valueX = margin + Math.max(22, doc.getTextWidth(labelText) + 3);
     doc.setFont('helvetica', 'normal'); doc.setTextColor(txr, txg, txb);
-    const lines = doc.splitTextToSize(value, contentW - 25);
-    doc.text(lines, margin + 22, y);
+    const lines = doc.splitTextToSize(value, w - margin - valueX);
+    doc.text(lines, valueX, y);
     y += lineH * lines.length;
   };
 
@@ -559,7 +510,7 @@ function buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, l
   }
 
   const { tipoDoc = '', numDoc = '', bultoN = '', bultoTotal = '' } = docInfo;
-  if (tipoDoc && numDoc) addLine(tipoDoc === 'remito' ? 'Remito N°' : 'N° Desp.', numDoc);
+  if (tipoDoc && numDoc) addLine(tipoDoc === 'remito' ? 'Remito N°' : 'Nota de despacho N°', numDoc);
   if (bultoN && bultoTotal) addLine('Bulto', `${bultoN}/${bultoTotal}`);
 
   if (extra) {
@@ -685,9 +636,8 @@ export async function guardarRotulo() {
       </div>`).join('');
     document.getElementById('rotuloDescargasWrap').style.display = 'block';
 
-    loadRotulosGuardados(p.id);
     if (document.getElementById('paneRotulos')?.style.display !== 'none') loadRotulosScreen();
-    toast('Rótulo guardado', 'success');
+    toast('Envío guardado', 'success');
   } catch (e) {
     toast('No se pudo guardar: ' + e.message, 'error');
   } finally {
@@ -757,7 +707,7 @@ export function renderRotulosScreen() {
   });
 
   if (!filtered.length) {
-    const emptyMsg = '<div class="empty-state"><div class="empty-icon">🏷️</div><h3>Sin rótulos</h3><p>No hay rótulos que coincidan con el filtro.</p></div>';
+    const emptyMsg = '<div class="empty-state"><div class="empty-icon">📦</div><h3>Sin envíos</h3><p>No hay envíos que coincidan con el filtro.</p></div>';
     tbody.innerHTML = `<tr><td colspan="6">${emptyMsg}</td></tr>`;
     if (cards) cards.innerHTML = emptyMsg;
     return;
@@ -768,28 +718,31 @@ export function renderRotulosScreen() {
     const fecha = new Date(r.created_at).toLocaleDateString('es-AR');
     const doc   = r.tipo_documento ? `${r.tipo_documento === 'remito' ? 'Remito' : 'Nota de despacho'} ${r.numero_documento || ''}`.trim() : '—';
     const bulto = r.bulto_total > 1 ? `${r.bulto_total} bultos` : '1 bulto';
+    const verBtn = r.bulto_total > 1
+      ? `<button class="btn btn-ghost btn-sm" onclick="abrirBultosRotulo('${r.id}')">👁 Ver (${r.bulto_total})</button>`
+      : `<a class="btn btn-ghost btn-sm" href="${SUPABASE_URL}/storage/v1/object/public/rotulos/${r.storage_path}" target="_blank" rel="noopener">👁 Ver</a>`;
     const adminBtns = state.isAdmin ? `
       ${r.version > 1 ? `<button class="btn btn-ghost btn-sm btn-icon" title="Historial de versiones" onclick="verVersionesRotulo('${r.grupo_id}')">🕘</button>` : ''}
       <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="editRotuloGuardado('${r.id}')">✏️</button>
       <button class="btn btn-ghost btn-sm btn-icon" title="Eliminar" onclick="deleteRotuloGuardado('${r.grupo_id}')">🗑️</button>` : '';
-    return { r, prov, fecha, doc, bulto, adminBtns };
+    return { r, prov, fecha, doc, bulto, verBtn, adminBtns };
   });
 
-  tbody.innerHTML = rowsData.map(({ r, prov, fecha, doc, bulto, adminBtns }) => `<tr>
+  tbody.innerHTML = rowsData.map(({ r, prov, fecha, doc, bulto, verBtn, adminBtns }) => `<tr>
       <td>${esc(prov?.nombre || '(proveedor eliminado)')}</td>
       <td>${esc(doc)}${r.version > 1 ? ` <span class="badge badge-rubro">v${r.version}</span>` : ''}</td>
       <td>${esc(bulto)}</td>
       <td>${r.version}</td>
       <td>${fecha}</td>
       <td><div class="td-actions">
-        <button class="btn btn-ghost btn-sm" onclick="abrirBultosRotulo('${r.id}')">📦 Bultos</button>
+        ${verBtn}
         <button class="btn btn-ghost btn-sm btn-icon" title="Fotos del envío" onclick="abrirFotosRotulo('${r.grupo_id}','${r.proveedor_id}')">📷</button>
         ${adminBtns}
       </div></td>
     </tr>`).join('');
 
   if (cards) {
-    cards.innerHTML = rowsData.map(({ r, prov, fecha, doc, bulto, adminBtns }) => `<div class="prov-card">
+    cards.innerHTML = rowsData.map(({ r, prov, fecha, doc, bulto, verBtn, adminBtns }) => `<div class="prov-card">
       <div class="prov-card-header">
         <div><div class="prov-card-name">${esc(prov?.nombre || '(proveedor eliminado)')}</div>${r.version > 1 ? `<span class="badge badge-rubro" style="margin-top:4px;display:inline-flex">v${r.version}</span>` : ''}</div>
         <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${fecha}</span>
@@ -799,7 +752,7 @@ export function renderRotulosScreen() {
         <div class="prov-card-row">📦 ${esc(bulto)}</div>
       </div>
       <div class="prov-card-actions">
-        <button class="btn btn-ghost btn-sm" onclick="abrirBultosRotulo('${r.id}')">📦 Bultos</button>
+        ${verBtn}
         <button class="btn btn-ghost btn-sm" onclick="abrirFotosRotulo('${r.grupo_id}','${r.proveedor_id}')">📷 Fotos</button>
         ${state.isAdmin ? `
         ${r.version > 1 ? `<button class="btn btn-ghost btn-sm" onclick="verVersionesRotulo('${r.grupo_id}')">🕘 Historial</button>` : ''}

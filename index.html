@@ -116,7 +116,7 @@
       🤝 Comisionistas
     </button>
     <button class="nav-tab" onclick="showTab('rotulos')" id="tab-rotulos">
-      🏷️ Rótulos
+      📦 Envíos
     </button>
     <button class="nav-tab" onclick="showTab('admin')" id="tab-admin" style="display:none">
       ⚙️ Admin
@@ -223,10 +223,10 @@
       <div class="prov-cards" id="comCards"></div>
     </div>
 
-    <!-- RÓTULOS TAB -->
+    <!-- ENVÍOS TAB -->
     <div id="paneRotulos" style="display:none">
       <div class="section-header">
-        <div class="section-title">🏷️ Rótulos</div>
+        <div class="section-title">📦 Envíos</div>
       </div>
       <div class="toolbar">
         <div class="search-wrap">
@@ -649,10 +649,6 @@
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:8px">✅ Guardado — descargá cada bulto</div>
           <div id="rotuloDescargasList" style="display:flex;flex-direction:column;gap:6px"></div>
         </div>
-        <div style="margin-top:16px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:8px">📁 Rótulos guardados de este proveedor</div>
-          <div id="rotulosGuardadosList" style="display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto"></div>
-        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -669,7 +665,7 @@
 <div class="modal-overlay" id="modalRotuloBultos">
   <div class="modal" style="max-width:480px;width:100%">
     <div class="modal-header">
-      <div class="modal-title"><span class="accent">📦</span> Bultos de este rótulo</div>
+      <div class="modal-title"><span class="accent">📦</span> Bultos de este envío</div>
       <button class="btn-close" onclick="closeModal('modalRotuloBultos')">✕</button>
     </div>
     <div id="rotuloBultosList" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -1003,7 +999,7 @@
       <span class="mobile-nav-icon">🤝</span><span>Comisionistas</span>
     </button>
     <button class="mobile-nav-item" id="mm-rotulos" onclick="showTab('rotulos');closeMobileMenu()">
-      <span class="mobile-nav-icon">🏷️</span><span>Rótulos</span>
+      <span class="mobile-nav-icon">📦</span><span>Envíos</span>
     </button>
     <button class="mobile-nav-item" id="mm-admin" style="display:none" onclick="showTab('admin');closeMobileMenu()">
       <span class="mobile-nav-icon">⚙️</span><span>Administrador</span>
