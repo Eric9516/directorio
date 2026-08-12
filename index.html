@@ -614,14 +614,6 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Detalle / Descripción</label>
-          <textarea id="rotuloDetalle" placeholder="Ej: Motor eléctrico para reparación — N° interno 0452" rows="4" oninput="renderRotuloPreview()"></textarea>
-        </div>
-        <div class="form-group">
-          <label>Texto adicional (opcional)</label>
-          <input type="text" id="rotuloExtra" placeholder="Ej: URGENTE — Contactar antes de recibir" oninput="renderRotuloPreview()">
-        </div>
-        <div class="form-group">
           <label>Documento (opcional)</label>
           <div style="display:flex;gap:8px">
             <select id="rotuloTipoDoc" style="flex:1" onchange="renderRotuloPreview()">
@@ -632,13 +624,15 @@
             <input type="text" id="rotuloNumDoc" placeholder="N° de documento" style="flex:1" oninput="renderRotuloPreview()">
           </div>
         </div>
-        <div class="form-group" id="rotuloBultoWrap">
-          <label>N° de bulto (opcional)</label>
-          <div style="display:flex;align-items:center;gap:8px">
-            <input type="number" id="rotuloBultoN" min="1" placeholder="Bulto" style="flex:1" oninput="renderRotuloPreview()">
-            <span style="color:var(--text-muted);font-weight:700">/</span>
-            <input type="number" id="rotuloBultoTotal" min="1" placeholder="Total" style="flex:1" oninput="renderRotuloPreview()">
-          </div>
+        <div class="form-group">
+          <label>¿Cuántos bultos tiene este envío?</label>
+          <input type="number" id="rotuloBultoTotal" min="1" value="1" oninput="onBultoTotalChange()" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text)">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Se genera un PDF distinto por cada bulto, cada uno con su propia descripción.</div>
+        </div>
+        <div id="rotuloDetallesWrap" style="display:flex;flex-direction:column;gap:14px"></div>
+        <div class="form-group">
+          <label>Texto adicional (opcional)</label>
+          <input type="text" id="rotuloExtra" placeholder="Ej: URGENTE — Contactar antes de recibir" oninput="renderRotuloPreview()">
         </div>
         <div class="form-group" id="rotuloMotivoWrap" style="display:none;margin-bottom:0">
           <label>Motivo de la edición (obligatorio)</label>
@@ -646,11 +640,15 @@
         </div>
       </div>
       <div>
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:10px">Vista previa</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:10px">Vista previa (bulto 1)</div>
         <div id="rotuloPreviewWrap" style="background:#d0d0d0;border-radius:10px;padding:16px">
           <div id="rotuloPreview" style="width:100%"></div>
         </div>
         <div style="margin-top:6px;font-size:11px;color:var(--text-muted);text-align:center">El diseño lo configura el administrador</div>
+        <div id="rotuloDescargasWrap" style="display:none;margin-top:16px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:8px">✅ Guardado — descargá cada bulto</div>
+          <div id="rotuloDescargasList" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
         <div style="margin-top:16px">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:8px">📁 Rótulos guardados de este proveedor</div>
           <div id="rotulosGuardadosList" style="display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto"></div>
@@ -659,18 +657,24 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modalRotulo')">Cancelar</button>
-      <button class="btn btn-ghost" id="btnVistaPreviaRotulo" onclick="vistaPreviaRotuloGuardado()" style="display:none">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        Vista previa
-      </button>
-      <button class="btn btn-ghost" id="btnDescargarRotulo" onclick="descargarRotuloGuardado()" style="display:none">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Descargar
-      </button>
       <button class="btn btn-red" id="btnGuardarRotulo" onclick="guardarRotulo()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
         <span id="btnGuardarRotuloLabel">Guardar</span>
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: BULTOS DE UN RÓTULO ===== -->
+<div class="modal-overlay" id="modalRotuloBultos">
+  <div class="modal" style="max-width:480px;width:100%">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">📦</span> Bultos de este rótulo</div>
+      <button class="btn-close" onclick="closeModal('modalRotuloBultos')">✕</button>
+    </div>
+    <div id="rotuloBultosList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalRotuloBultos')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -699,9 +703,15 @@
     <div id="rotuloFotosGrid" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px"></div>
     <div class="form-group" style="margin-bottom:0">
       <label>Agregar fotos (hasta 5 en total)</label>
-      <button type="button" class="btn btn-primary" id="rotuloFotosTrigger" onclick="document.getElementById('rotuloFotosInput').click()" style="width:100%;justify-content:center">
-        📷 Elegir o sacar fotos
-      </button>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn btn-primary" id="rotuloFotosTrigger" onclick="document.getElementById('rotuloFotosCamara').click()" style="flex:1;justify-content:center">
+          📷 Sacar foto
+        </button>
+        <button type="button" class="btn btn-ghost" id="rotuloFotosTriggerGaleria" onclick="document.getElementById('rotuloFotosInput').click()" style="flex:1;justify-content:center">
+          🖼️ Elegir de galería
+        </button>
+      </div>
+      <input type="file" id="rotuloFotosCamara" accept="image/*" capture="environment" onchange="handleRotuloFotosUpload(event)">
       <input type="file" id="rotuloFotosInput" accept="image/*" multiple onchange="handleRotuloFotosUpload(event)">
       <div id="rotuloFotosStatus" style="font-size:12px;color:var(--text-muted);margin-top:6px"></div>
     </div>

@@ -190,15 +190,14 @@ export function openRotulo(id) {
   state.rotuloProvId = id;
   state.rotuloEditando = null;
   state.rotuloGuardadoActual = null;
-  document.getElementById('rotuloDetalle').value = '';
   document.getElementById('rotuloExtra').value   = '';
   document.getElementById('rotuloTipoDoc').value    = '';
   document.getElementById('rotuloNumDoc').value     = '';
-  document.getElementById('rotuloBultoN').value     = '';
-  document.getElementById('rotuloBultoTotal').value = '';
+  document.getElementById('rotuloBultoTotal').value = '1';
   document.getElementById('rotuloMotivoEdicion').value = '';
   document.getElementById('rotuloMotivoWrap').style.display = 'none';
-  resetRotuloFooter();
+  renderBultoDetalleFields(false);
+  resetRotuloDescargas();
   document.querySelectorAll('#modalRotulo .size-btn').forEach(b => b.classList.remove('active'));
   const a4btn = document.querySelector('#modalRotulo .size-btn');
   if (a4btn) a4btn.classList.add('active');
@@ -211,13 +210,36 @@ export function openRotulo(id) {
   document.getElementById('modalRotulo').classList.add('open');
 }
 
-function resetRotuloFooter() {
-  document.getElementById('btnDescargarRotulo').style.display = 'none';
-  document.getElementById('btnVistaPreviaRotulo').style.display = 'none';
+function resetRotuloDescargas() {
+  document.getElementById('rotuloDescargasWrap').style.display = 'none';
+  document.getElementById('rotuloDescargasList').innerHTML = '';
   const btn = document.getElementById('btnGuardarRotulo');
   if (btn) btn.disabled = false;
   const lbl = document.getElementById('btnGuardarRotuloLabel');
   if (lbl) lbl.textContent = 'Guardar';
+}
+
+// ===== BULTOS (uno o varios por envío) =====
+export function onBultoTotalChange() {
+  renderBultoDetalleFields(true);
+  renderRotuloPreview();
+}
+
+function renderBultoDetalleFields(preserve, prefill = null) {
+  const wrap  = document.getElementById('rotuloDetallesWrap');
+  const total = Math.max(1, parseInt(document.getElementById('rotuloBultoTotal')?.value) || 1);
+  const prevValues = prefill || (preserve
+    ? Array.from(wrap.querySelectorAll('.rotulo-bulto-detalle')).map(t => t.value)
+    : []);
+  wrap.innerHTML = Array.from({ length: total }, (_, i) => `
+    <div class="form-group" style="margin-bottom:0">
+      <label>${total > 1 ? `Descripción — Bulto ${i + 1} de ${total}` : 'Detalle / Descripción'}</label>
+      <textarea class="rotulo-bulto-detalle" placeholder="Ej: Motor eléctrico para reparación — N° interno 0452" rows="3" oninput="renderRotuloPreview()">${esc(prevValues[i] || '')}</textarea>
+    </div>`).join('');
+}
+
+function getBultosDetalle() {
+  return Array.from(document.querySelectorAll('#rotuloDetallesWrap .rotulo-bulto-detalle')).map(t => t.value);
 }
 
 // ===== EDICIÓN (admin) =====
@@ -226,20 +248,20 @@ export async function editRotuloGuardado(id) {
     const rows = await sbFetch(`/rotulos_generados?id=eq.${id}&select=*`);
     const r = rows[0];
     if (!r) return;
+    const bultos = await sbFetch(`/rotulos_bultos?rotulo_id=eq.${id}&select=*&order=numero.asc`);
 
     state.rotuloProvId = r.proveedor_id;
-    state.rotuloEditando = { grupoId: r.grupo_id, version: r.version, prevId: r.id };
+    state.rotuloEditando = { grupoId: r.grupo_id };
     state.rotuloGuardadoActual = null;
 
-    document.getElementById('rotuloDetalle').value       = r.detalle || '';
-    document.getElementById('rotuloExtra').value         = r.extra || '';
+    document.getElementById('rotuloExtra').value          = r.extra || '';
     document.getElementById('rotuloTipoDoc').value        = r.tipo_documento || '';
-    document.getElementById('rotuloNumDoc').value          = r.numero_documento || '';
-    document.getElementById('rotuloBultoN').value          = r.bulto_actual || '';
-    document.getElementById('rotuloBultoTotal').value      = r.bulto_total || '';
+    document.getElementById('rotuloNumDoc').value         = r.numero_documento || '';
+    document.getElementById('rotuloBultoTotal').value     = bultos.length || r.bulto_total || 1;
     document.getElementById('rotuloMotivoEdicion').value  = '';
     document.getElementById('rotuloMotivoWrap').style.display = 'block';
-    resetRotuloFooter();
+    resetRotuloDescargas();
+    renderBultoDetalleFields(false, bultos.map(b => b.detalle || ''));
 
     document.querySelectorAll('#modalRotulo .size-btn').forEach(b => b.classList.remove('active'));
     const wEl = document.getElementById('rotulo_w');
@@ -264,11 +286,10 @@ export async function verVersionesRotulo(grupoId) {
     const rows = await sbFetch(`/rotulos_generados?grupo_id=eq.${grupoId}&select=*&order=version.desc`);
     listEl.innerHTML = rows.map(r => {
       const fecha = new Date(r.created_at).toLocaleString('es-AR');
-      const url   = `${SUPABASE_URL}/storage/v1/object/public/rotulos/${r.storage_path}`;
       return `<div style="border:1.5px solid var(--border);border-radius:8px;padding:10px 12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
           <strong style="font-size:13px;color:var(--blue)">Versión ${r.version}${r.vigente ? ' (actual)' : ''}</strong>
-          <a href="${url}" target="_blank" rel="noopener" style="font-size:12px">Ver PDF</a>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="abrirBultosRotulo('${r.id}')">📦 Ver bultos</button>
         </div>
         <div style="font-size:11px;color:var(--text-muted)">${esc(fecha)}</div>
         ${r.motivo_edicion ? `<div style="font-size:12px;color:var(--text);margin-top:4px"><strong>Motivo:</strong> ${esc(r.motivo_edicion)}</div>` : ''}
@@ -279,13 +300,34 @@ export async function verVersionesRotulo(grupoId) {
   }
 }
 
-// ===== DOCUMENTO / BULTO =====
+// ===== VER BULTOS DE UN RÓTULO (una versión puntual) =====
+export async function abrirBultosRotulo(rotuloId) {
+  const listEl = document.getElementById('rotuloBultosList');
+  listEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Cargando...</div>';
+  document.getElementById('modalRotuloBultos').classList.add('open');
+  try {
+    const bultos = await sbFetch(`/rotulos_bultos?rotulo_id=eq.${rotuloId}&select=*&order=numero.asc`);
+    listEl.innerHTML = bultos.map(b => {
+      const url = `${SUPABASE_URL}/storage/v1/object/public/rotulos/${b.storage_path}`;
+      return `<div style="border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div style="min-width:0">
+          <strong style="font-size:13px;color:var(--blue)">Bulto ${b.numero}/${bultos.length}</strong>
+          ${b.detalle ? `<div style="font-size:12px;color:var(--text-mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.detalle)}</div>` : ''}
+        </div>
+        <a class="btn btn-ghost btn-sm" href="${url}" target="_blank" rel="noopener" style="white-space:nowrap">Ver PDF</a>
+      </div>`;
+    }).join('') || '<div style="font-size:12px;color:var(--text-muted)">Sin bultos.</div>';
+  } catch {
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--danger)">Error al cargar los bultos.</div>';
+  }
+}
+
+// ===== DOCUMENTO =====
 function getDocInfo() {
   const tipoDoc    = document.getElementById('rotuloTipoDoc')?.value || '';
   const numDoc     = document.getElementById('rotuloNumDoc')?.value.trim() || '';
-  const bultoN     = document.getElementById('rotuloBultoN')?.value || '';
-  const bultoTotal = document.getElementById('rotuloBultoTotal')?.value || '';
-  return { tipoDoc, numDoc, bultoN, bultoTotal };
+  const bultoTotal = document.getElementById('rotuloBultoTotal')?.value || '1';
+  return { tipoDoc, numDoc, bultoTotal };
 }
 
 function slugifyProv(nombre, id) {
@@ -300,8 +342,8 @@ function slugifyProv(nombre, id) {
 // ===== HISTORIAL DE RÓTULOS GUARDADOS =====
 function rotuloLabel(r) {
   const docTxt = r.tipo_documento ? `${r.tipo_documento === 'remito' ? 'Remito' : 'Nota de despacho'} ${r.numero_documento || ''}`.trim() : '';
-  const bulto  = r.bulto_actual && r.bulto_total ? `Bulto ${r.bulto_actual}/${r.bulto_total}` : '';
-  return [docTxt, bulto].filter(Boolean).join(' — ') || 'Rótulo';
+  const bultos = r.bulto_total > 1 ? `${r.bulto_total} bultos` : '';
+  return [docTxt, bultos].filter(Boolean).join(' — ') || 'Rótulo';
 }
 
 function rotuloFotoBoton(r) {
@@ -331,12 +373,11 @@ export async function loadRotulosGuardados(provId) {
     listEl.innerHTML = rows.map(r => {
       const fecha = new Date(r.created_at).toLocaleDateString('es-AR');
       const label = rotuloLabel(r) + (r.version > 1 ? ` (v${r.version})` : '');
-      const url   = `${SUPABASE_URL}/storage/v1/object/public/rotulos/${r.storage_path}`;
       return `<div style="display:flex;align-items:center;gap:2px;border-radius:6px;background:var(--surface2)">
-        <a href="${url}" target="_blank" rel="noopener" style="flex:1;display:flex;justify-content:space-between;gap:8px;padding:6px 8px;font-size:12px;text-decoration:none;color:var(--text);min-width:0">
+        <button type="button" onclick="abrirBultosRotulo('${r.id}')" style="flex:1;display:flex;justify-content:space-between;gap:8px;padding:6px 8px;font-size:12px;background:none;border:none;text-align:left;cursor:pointer;color:var(--text);min-width:0">
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(label)}</span>
           <span style="color:var(--text-muted);white-space:nowrap">${fecha}</span>
-        </a>
+        </button>
         ${rotuloFotoBoton(r)}
         ${rotuloAdminBotones(r)}
       </div>`;
@@ -349,9 +390,13 @@ export async function loadRotulosGuardados(provId) {
 export async function deleteRotuloGuardado(grupoId) {
   if (!confirm('¿Eliminar este rótulo y todo su historial de versiones? Esta acción no se puede deshacer.')) return;
   try {
-    const versiones = await sbFetch(`/rotulos_generados?grupo_id=eq.${grupoId}&select=id,storage_path`);
+    const versiones   = await sbFetch(`/rotulos_generados?grupo_id=eq.${grupoId}&select=id`);
+    const versionIds  = versiones.map(v => v.id);
+    const bultos      = versionIds.length
+      ? await sbFetch(`/rotulos_bultos?rotulo_id=in.(${versionIds.join(',')})&select=storage_path`)
+      : [];
     await sbFetch(`/rotulos_generados?grupo_id=eq.${grupoId}`, { method: 'DELETE' });
-    await Promise.all(versiones.map(v => sbStorageDelete(v.storage_path).catch(() => {})));
+    await Promise.all(bultos.map(b => sbStorageDelete(b.storage_path).catch(() => {})));
     toast('Rótulo eliminado', 'error');
     if (state.rotuloProvId) loadRotulosGuardados(state.rotuloProvId);
     if (document.getElementById('paneRotulos')?.style.display !== 'none') loadRotulosScreen();
@@ -427,10 +472,12 @@ export function renderRotuloPreview() {
   const p = state.proveedores.find(x => x.id === state.rotuloProvId);
   if (!p) return;
   const pContacts = state.contactos.filter(c => c.proveedor_id === p.id);
+  const bultos    = getBultosDetalle();
+  const docInfo   = getDocInfo();
   renderRotuloPreviewTo('rotuloPreview', getCurrentDesign(), p, pContacts,
-    document.getElementById('rotuloDetalle').value,
+    bultos[0] || '',
     document.getElementById('rotuloExtra').value,
-    getDocInfo());
+    { ...docInfo, bultoN: bultos.length > 1 ? '1' : '' });
 }
 
 // ===== PDF =====
@@ -545,32 +592,10 @@ function buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, l
   }
 }
 
-function getPDFContext() {
-  const p = state.proveedores.find(x => x.id === state.rotuloProvId);
-  if (!p) return null;
-  const { jsPDF } = window.jspdf;
-  const rd        = getCurrentDesign();
-  const [w, h]    = getRotuloWH();
-  const doc       = new jsPDF({ orientation: w > h ? 'landscape' : 'portrait', unit: 'mm', format: [w, h] });
-  return {
-    p, doc, rd, w, h,
-    pContacts: state.contactos.filter(c => c.proveedor_id === p.id),
-    campos:    state.configData.rotulo_campos || { horario: true, direccion: true, telefono: true },
-    detalle:   document.getElementById('rotuloDetalle').value,
-    extra:     document.getElementById('rotuloExtra').value,
-    pie:       state.configData.rotulo_pie     || '',
-    empresa:   state.configData.empresa_nombre || 'Cremac',
-    logo:      state.logoBase64 || state.configData.logo_base64 || '',
-    fecha:     new Date().toLocaleDateString('es-AR'),
-    docInfo:   getDocInfo(),
-  };
-}
-
-// ===== GUARDAR (genera PDF + sube a Storage + registra versión) =====
+// ===== GUARDAR (genera un PDF por bulto + sube a Storage + registra versión) =====
 export async function guardarRotulo() {
-  const ctx = getPDFContext();
-  if (!ctx) return;
-  const { p, doc, rd, w, h, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, docInfo } = ctx;
+  const p = state.proveedores.find(x => x.id === state.rotuloProvId);
+  if (!p) return;
 
   const editando = state.rotuloEditando;
   let motivo = '';
@@ -579,29 +604,47 @@ export async function guardarRotulo() {
     if (!motivo) { toast('Contá el motivo de la edición antes de guardar', 'error'); return; }
   }
 
-  buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, logo, fecha, w, h, docInfo);
+  const rd            = getCurrentDesign();
+  const [w, h]         = getRotuloWH();
+  const pContacts      = state.contactos.filter(c => c.proveedor_id === p.id);
+  const campos         = state.configData.rotulo_campos || { horario: true, direccion: true, telefono: true };
+  const pie            = state.configData.rotulo_pie     || '';
+  const empresa        = state.configData.empresa_nombre || 'Cremac';
+  const logo           = state.logoBase64 || state.configData.logo_base64 || '';
+  const fecha          = new Date().toLocaleDateString('es-AR');
+  const docInfo        = getDocInfo();
+  const extra          = document.getElementById('rotuloExtra').value;
+  const bultosDetalle  = getBultosDetalle();
+  const total          = bultosDetalle.length;
 
   const btn = document.getElementById('btnGuardarRotulo');
   const lbl = document.getElementById('btnGuardarRotuloLabel');
   if (btn) btn.disabled = true;
-  if (lbl) lbl.textContent = 'Guardando...';
 
   try {
-    const blob = doc.output('blob');
-    const path = `${slugifyProv(p.nombre, p.id)}/${Date.now()}_${w}x${h}mm.pdf`;
-    const url  = await sbStorageUpload(path, blob);
+    const { jsPDF } = window.jspdf;
+    const bultosGenerados = [];
+    for (let i = 0; i < total; i++) {
+      if (lbl) lbl.textContent = total > 1 ? `Guardando bulto ${i + 1}/${total}...` : 'Guardando...';
+      const doc = new jsPDF({ orientation: w > h ? 'landscape' : 'portrait', unit: 'mm', format: [w, h] });
+      buildPDF(doc, p, rd, pContacts, campos, bultosDetalle[i], extra, pie, empresa, logo, fecha, w, h,
+        { tipoDoc: docInfo.tipoDoc, numDoc: docInfo.numDoc,
+          bultoN: total > 1 ? String(i + 1) : '', bultoTotal: total > 1 ? String(total) : '' });
+      const blob = doc.output('blob');
+      const path = `${slugifyProv(p.nombre, p.id)}/${Date.now()}_bulto${i + 1}de${total}_${w}x${h}mm.pdf`;
+      const url  = await sbStorageUpload(path, blob);
+      bultosGenerados.push({ numero: i + 1, detalle: bultosDetalle[i], storage_path: path, url });
+    }
 
     const payload = {
       proveedor_id:     p.id,
       tipo_documento:   docInfo.tipoDoc || null,
       numero_documento: docInfo.numDoc  || null,
-      bulto_actual:     docInfo.bultoN     ? parseInt(docInfo.bultoN)     : null,
-      bulto_total:      docInfo.bultoTotal ? parseInt(docInfo.bultoTotal) : null,
-      detalle:          detalle || null,
-      extra:            extra   || null,
+      bulto_total:      total,
+      extra:            extra || null,
       ancho_mm:         w,
       alto_mm:          h,
-      storage_path:     path,
+      storage_path:     bultosGenerados[0].storage_path,
       creado_por:       state.currentUser?.id || null,
       vigente:          true,
     };
@@ -619,11 +662,29 @@ export async function guardarRotulo() {
     }
 
     const inserted = await sbFetch('/rotulos_generados', { method: 'POST', body: JSON.stringify(payload) });
-    state.rotuloGuardadoActual = { id: inserted[0]?.id, url, w, h };
+    const rotuloId = inserted[0]?.id;
+
+    await sbFetch('/rotulos_bultos', {
+      method: 'POST',
+      body: JSON.stringify(bultosGenerados.map(b => ({
+        rotulo_id: rotuloId, numero: b.numero, detalle: b.detalle || null, storage_path: b.storage_path,
+      }))),
+    });
+
+    state.rotuloGuardadoActual = bultosGenerados.map(b => ({ numero: b.numero, url: b.url, w, h }));
     state.rotuloEditando = null;
     document.getElementById('rotuloMotivoWrap').style.display = 'none';
-    document.getElementById('btnDescargarRotulo').style.display = '';
-    document.getElementById('btnVistaPreviaRotulo').style.display = '';
+
+    document.getElementById('rotuloDescargasList').innerHTML = bultosGenerados.map(b => `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--surface2);border-radius:6px;padding:8px 10px">
+        <span style="font-size:12px;font-weight:600">Bulto ${b.numero}/${total}</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="vistaPreviaRotuloGuardado(${b.numero})">Vista previa</button>
+          <button class="btn btn-ghost btn-sm" onclick="descargarRotuloGuardado(${b.numero})">Descargar</button>
+        </div>
+      </div>`).join('');
+    document.getElementById('rotuloDescargasWrap').style.display = 'block';
+
     loadRotulosGuardados(p.id);
     if (document.getElementById('paneRotulos')?.style.display !== 'none') loadRotulosScreen();
     toast('Rótulo guardado', 'success');
@@ -635,23 +696,23 @@ export async function guardarRotulo() {
   }
 }
 
-export function descargarRotuloGuardado() {
-  const g = state.rotuloGuardadoActual;
-  if (!g) return;
+export function descargarRotuloGuardado(numero) {
+  const item = (state.rotuloGuardadoActual || []).find(b => b.numero === numero);
+  if (!item) return;
   const a = document.createElement('a');
-  a.href = g.url;
+  a.href = item.url;
   a.target = '_blank';
   a.rel = 'noopener';
-  a.download = `rotulo_${g.w}x${g.h}mm.pdf`;
+  a.download = `rotulo_bulto${item.numero}_${item.w}x${item.h}mm.pdf`;
   document.body.appendChild(a);
   a.click();
   a.remove();
 }
 
-export function vistaPreviaRotuloGuardado() {
-  const g = state.rotuloGuardadoActual;
-  if (!g) return;
-  window.open(g.url, '_blank');
+export function vistaPreviaRotuloGuardado(numero) {
+  const item = (state.rotuloGuardadoActual || []).find(b => b.numero === numero);
+  if (!item) return;
+  window.open(item.url, '_blank');
 }
 
 // ===== PANTALLA "RÓTULOS" (todas las notas de todos los proveedores) =====
@@ -706,40 +767,39 @@ export function renderRotulosScreen() {
     const prov  = state.proveedores.find(p => p.id === r.proveedor_id);
     const fecha = new Date(r.created_at).toLocaleDateString('es-AR');
     const doc   = r.tipo_documento ? `${r.tipo_documento === 'remito' ? 'Remito' : 'Nota de despacho'} ${r.numero_documento || ''}`.trim() : '—';
-    const bulto = r.bulto_actual && r.bulto_total ? `${r.bulto_actual}/${r.bulto_total}` : '—';
-    const url   = `${SUPABASE_URL}/storage/v1/object/public/rotulos/${r.storage_path}`;
+    const bulto = r.bulto_total > 1 ? `${r.bulto_total} bultos` : '1 bulto';
     const adminBtns = state.isAdmin ? `
       ${r.version > 1 ? `<button class="btn btn-ghost btn-sm btn-icon" title="Historial de versiones" onclick="verVersionesRotulo('${r.grupo_id}')">🕘</button>` : ''}
       <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="editRotuloGuardado('${r.id}')">✏️</button>
       <button class="btn btn-ghost btn-sm btn-icon" title="Eliminar" onclick="deleteRotuloGuardado('${r.grupo_id}')">🗑️</button>` : '';
-    return { r, prov, fecha, doc, bulto, url, adminBtns };
+    return { r, prov, fecha, doc, bulto, adminBtns };
   });
 
-  tbody.innerHTML = rowsData.map(({ r, prov, fecha, doc, bulto, url, adminBtns }) => `<tr>
+  tbody.innerHTML = rowsData.map(({ r, prov, fecha, doc, bulto, adminBtns }) => `<tr>
       <td>${esc(prov?.nombre || '(proveedor eliminado)')}</td>
       <td>${esc(doc)}${r.version > 1 ? ` <span class="badge badge-rubro">v${r.version}</span>` : ''}</td>
       <td>${esc(bulto)}</td>
       <td>${r.version}</td>
       <td>${fecha}</td>
       <td><div class="td-actions">
-        <a class="btn btn-ghost btn-sm" href="${url}" target="_blank" rel="noopener">Ver PDF</a>
+        <button class="btn btn-ghost btn-sm" onclick="abrirBultosRotulo('${r.id}')">📦 Bultos</button>
         <button class="btn btn-ghost btn-sm btn-icon" title="Fotos del envío" onclick="abrirFotosRotulo('${r.grupo_id}','${r.proveedor_id}')">📷</button>
         ${adminBtns}
       </div></td>
     </tr>`).join('');
 
   if (cards) {
-    cards.innerHTML = rowsData.map(({ r, prov, fecha, doc, bulto, url, adminBtns }) => `<div class="prov-card">
+    cards.innerHTML = rowsData.map(({ r, prov, fecha, doc, bulto, adminBtns }) => `<div class="prov-card">
       <div class="prov-card-header">
         <div><div class="prov-card-name">${esc(prov?.nombre || '(proveedor eliminado)')}</div>${r.version > 1 ? `<span class="badge badge-rubro" style="margin-top:4px;display:inline-flex">v${r.version}</span>` : ''}</div>
         <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${fecha}</span>
       </div>
       <div class="prov-card-body">
         <div class="prov-card-row">📄 ${esc(doc)}</div>
-        ${bulto !== '—' ? `<div class="prov-card-row">📦 Bulto ${esc(bulto)}</div>` : ''}
+        <div class="prov-card-row">📦 ${esc(bulto)}</div>
       </div>
       <div class="prov-card-actions">
-        <a class="btn btn-ghost btn-sm" href="${url}" target="_blank" rel="noopener">📄 Ver PDF</a>
+        <button class="btn btn-ghost btn-sm" onclick="abrirBultosRotulo('${r.id}')">📦 Bultos</button>
         <button class="btn btn-ghost btn-sm" onclick="abrirFotosRotulo('${r.grupo_id}','${r.proveedor_id}')">📷 Fotos</button>
         ${state.isAdmin ? `
         ${r.version > 1 ? `<button class="btn btn-ghost btn-sm" onclick="verVersionesRotulo('${r.grupo_id}')">🕘 Historial</button>` : ''}
@@ -779,6 +839,7 @@ export async function abrirFotosRotulo(grupoId, proveedorId) {
   state.rotuloFotosGrupoId = grupoId;
   state.rotuloFotosProvId  = proveedorId;
   document.getElementById('rotuloFotosInput').value = '';
+  document.getElementById('rotuloFotosCamara').value = '';
   document.getElementById('rotuloFotosStatus').textContent = '';
   document.getElementById('modalRotuloFotos').classList.add('open');
   await loadRotuloFotos(grupoId);
@@ -805,12 +866,16 @@ async function loadRotuloFotos(grupoId) {
     const status  = document.getElementById('rotuloFotosStatus');
     const lleno   = rows.length >= MAX_FOTOS_ROTULO;
     status.textContent = lleno ? `Llegaste al máximo de ${MAX_FOTOS_ROTULO} fotos.` : `${rows.length}/${MAX_FOTOS_ROTULO} fotos`;
-    document.getElementById('rotuloFotosInput').disabled   = lleno;
-    document.getElementById('rotuloFotosTrigger').disabled = lleno;
+    document.getElementById('rotuloFotosInput').disabled          = lleno;
+    document.getElementById('rotuloFotosCamara').disabled         = lleno;
+    document.getElementById('rotuloFotosTrigger').disabled        = lleno;
+    document.getElementById('rotuloFotosTriggerGaleria').disabled = lleno;
   } catch {
     grid.innerHTML = '<div style="font-size:12px;color:var(--danger)">Error al cargar las fotos.</div>';
-    document.getElementById('rotuloFotosInput').disabled   = false;
-    document.getElementById('rotuloFotosTrigger').disabled = false;
+    document.getElementById('rotuloFotosInput').disabled          = false;
+    document.getElementById('rotuloFotosCamara').disabled         = false;
+    document.getElementById('rotuloFotosTrigger').disabled        = false;
+    document.getElementById('rotuloFotosTriggerGaleria').disabled = false;
   }
 }
 
