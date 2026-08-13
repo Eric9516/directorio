@@ -22,7 +22,6 @@ export const state = {
   selectedSize: 'a4',
   selectedDesignSize: 'a4',
   // Tareas Semáforo
-  activeModule: null, // 'directorio' | 'tareas'
   tareas: [],
   currentTaskId: null,
 };

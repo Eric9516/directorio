@@ -54,9 +54,6 @@
       </div>
     </div>
     <div class="header-right">
-      <button class="header-switch" id="headerSwitchBtn" style="display:none" onclick="switchModule()">
-        <span id="headerSwitchLabel">📋 Tareas</span>
-      </button>
       <div class="user-badge" onclick="toggleUserDropdown()">
         <div class="user-avatar" id="userAvatar">U</div>
         <span class="user-name" id="userName">Usuario</span>
@@ -82,32 +79,6 @@
     </div>
   </header>
 
-  <!-- ===== LAUNCHER ===== -->
-  <div id="launcherScreen">
-    <div class="launcher-wrap">
-      <div class="launcher-greeting" id="launcherGreeting">Hola 👋</div>
-      <div class="launcher-title">¿Qué querés hacer?</div>
-      <div class="launcher-cards">
-        <div class="launcher-card" onclick="openModule('directorio')">
-          <div class="launcher-card-icon">🧀</div>
-          <div>
-            <div class="launcher-card-name">Directorio</div>
-            <div class="launcher-card-desc">Proveedores y comisionistas</div>
-          </div>
-        </div>
-        <div class="launcher-card" onclick="openModule('tareas')">
-          <div class="launcher-card-icon">🚦</div>
-          <div>
-            <div class="launcher-card-name">Tareas</div>
-            <div class="launcher-card-desc">Detectá qué tareas estás arrastrando</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== DIRECTORIO WRAP ===== -->
-  <div id="directorioWrap" style="display:none">
   <nav class="app-nav">
     <button class="nav-tab active" onclick="showTab('proveedores')" id="tab-proveedores">
       🧀 Proveedores
@@ -118,6 +89,11 @@
     <button class="nav-tab" onclick="showTab('rotulos')" id="tab-rotulos">
       📦 Envíos
     </button>
+    <div class="nav-divider"></div>
+    <button class="nav-tab" onclick="showTab('tareas')" id="tab-tareas">
+      ✅ Tareas
+    </button>
+    <div class="nav-divider nav-divider-push" id="navDividerAdmin" style="display:none"></div>
     <button class="nav-tab" onclick="showTab('admin')" id="tab-admin" style="display:none">
       ⚙️ Admin
     </button>
@@ -267,6 +243,45 @@
       <div class="prov-cards" id="rotulosCards"></div>
     </div>
 
+    <!-- TAREAS TAB -->
+    <div id="paneTareas" style="display:none">
+      <div class="section-header">
+        <div class="section-title">🚦 Hoy</div>
+        <div class="section-actions">
+          <button class="btn btn-primary btn-sm" onclick="openNewTaskModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nueva tarea
+          </button>
+        </div>
+      </div>
+
+      <div class="tareas-date" id="tareasDate"></div>
+      <div class="tareas-stats" id="tareasStats"></div>
+
+      <div class="tareas-toolbar">
+        <div class="tareas-filters">
+          <button class="tareas-filter-btn active" data-filter="todas" onclick="setTareasFilter('todas')">Todas</button>
+          <button class="tareas-filter-btn" data-filter="red" onclick="setTareasFilter('red')"><span class="filter-dot dot-red"></span>Rojas</button>
+          <button class="tareas-filter-btn" data-filter="yellow" onclick="setTareasFilter('yellow')"><span class="filter-dot dot-yellow"></span>Amarillas</button>
+          <button class="tareas-filter-btn" data-filter="green" onclick="setTareasFilter('green')"><span class="filter-dot dot-green"></span>Verdes</button>
+          <button class="tareas-filter-btn" data-filter="stagnant" onclick="setTareasFilter('stagnant')">⚠ Estancadas</button>
+          <button class="tareas-filter-btn" data-filter="completed" onclick="setTareasFilter('completed')">✓ Completadas</button>
+        </div>
+        <div class="vista-selector">
+          <button class="vista-btn" onclick="toggleVistaDropdown()">
+            <span id="vistaIcon">☰</span> Vista
+          </button>
+          <div class="vista-dropdown" id="vistaDropdown">
+            <button class="vista-option active" data-view="wide" onclick="setTaskView('wide')">▬ Cards anchas</button>
+            <button class="vista-option" data-view="list" onclick="setTaskView('list')">☰ Lista</button>
+            <button class="vista-option" data-view="grid" onclick="setTaskView('grid')">▦ Cuadrícula</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="tareasListContainer"></div>
+    </div>
+
     <!-- ADMIN TAB -->
     <div id="paneAdmin" style="display:none">
       <div class="section-header">
@@ -354,50 +369,6 @@
       </div>
     </div>
   </main>
-  </div><!-- /directorioWrap -->
-
-  <!-- ===== TAREAS WRAP ===== -->
-  <div id="tareasWrap" style="display:none">
-  <main class="app-main">
-    <div id="paneTareas" style="display:block">
-      <div class="section-header">
-        <div class="section-title">🚦 Hoy</div>
-        <div class="section-actions">
-          <button class="btn btn-primary btn-sm" onclick="openNewTaskModal()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Nueva tarea
-          </button>
-        </div>
-      </div>
-
-      <div class="tareas-date" id="tareasDate"></div>
-      <div class="tareas-stats" id="tareasStats"></div>
-
-      <div class="tareas-toolbar">
-        <div class="tareas-filters">
-          <button class="tareas-filter-btn active" data-filter="todas" onclick="setTareasFilter('todas')">Todas</button>
-          <button class="tareas-filter-btn" data-filter="red" onclick="setTareasFilter('red')"><span class="filter-dot dot-red"></span>Rojas</button>
-          <button class="tareas-filter-btn" data-filter="yellow" onclick="setTareasFilter('yellow')"><span class="filter-dot dot-yellow"></span>Amarillas</button>
-          <button class="tareas-filter-btn" data-filter="green" onclick="setTareasFilter('green')"><span class="filter-dot dot-green"></span>Verdes</button>
-          <button class="tareas-filter-btn" data-filter="stagnant" onclick="setTareasFilter('stagnant')">⚠ Estancadas</button>
-          <button class="tareas-filter-btn" data-filter="completed" onclick="setTareasFilter('completed')">✓ Completadas</button>
-        </div>
-        <div class="vista-selector">
-          <button class="vista-btn" onclick="toggleVistaDropdown()">
-            <span id="vistaIcon">☰</span> Vista
-          </button>
-          <div class="vista-dropdown" id="vistaDropdown">
-            <button class="vista-option active" data-view="wide" onclick="setTaskView('wide')">▬ Cards anchas</button>
-            <button class="vista-option" data-view="list" onclick="setTaskView('list')">☰ Lista</button>
-            <button class="vista-option" data-view="grid" onclick="setTaskView('grid')">▦ Cuadrícula</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="tareasListContainer"></div>
-    </div>
-  </main>
-  </div><!-- /tareasWrap -->
 
   <!-- ===== BOTTOM NAV (mobile, solo en tareas) ===== -->
   <nav class="bottom-nav">
@@ -1033,6 +1004,11 @@
     <button class="mobile-nav-item" id="mm-rotulos" onclick="showTab('rotulos');closeMobileMenu()">
       <span class="mobile-nav-icon">📦</span><span>Envíos</span>
     </button>
+    <div style="height:1px;background:var(--border);margin:8px 16px"></div>
+    <button class="mobile-nav-item" id="mm-tareas" onclick="showTab('tareas');closeMobileMenu()">
+      <span class="mobile-nav-icon">✅</span><span>Tareas</span>
+    </button>
+    <div style="height:1px;background:var(--border);margin:8px 16px;display:none" id="mmDividerAdmin"></div>
     <button class="mobile-nav-item" id="mm-admin" style="display:none" onclick="showTab('admin');closeMobileMenu()">
       <span class="mobile-nav-icon">⚙️</span><span>Administrador</span>
     </button>

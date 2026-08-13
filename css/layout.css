@@ -141,13 +141,15 @@
 .nav-tab:hover { color: var(--blue); }
 .nav-tab.active { color: var(--blue); border-bottom-color: var(--red); }
 
-@media (min-width: 769px) {
-  #tab-admin {
-    margin-left: auto;
-    border-left: 2px solid var(--border);
-    padding-left: 20px;
-  }
+.nav-divider {
+  width: 1px;
+  height: 22px;
+  align-self: center;
+  margin: 0 6px;
+  background: var(--border);
+  flex-shrink: 0;
 }
+.nav-divider-push { margin-left: auto; }
 
 /* ===== MAIN ===== */
 .app-main {

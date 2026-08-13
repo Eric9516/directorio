@@ -38,7 +38,6 @@ function updateUserDisplay() {
   document.getElementById('mobileUsername').textContent = fullName;
   document.getElementById('mobileEmail').textContent   = state.currentUser?.email || '';
   document.getElementById('mobileAvatar').textContent  = initial;
-  document.getElementById('launcherGreeting').textContent = 'Hola, ' + nombre + ' \uD83D\uDC4B';
 }
 
 // ===== APP INIT =====
@@ -49,64 +48,19 @@ async function initApp() {
   updateUserDisplay();
 
   if (state.isAdmin) {
-    document.getElementById('tab-admin').style.display = 'flex';
-    document.getElementById('mm-admin').style.display  = 'flex';
+    document.getElementById('tab-admin').style.display      = 'flex';
+    document.getElementById('mm-admin').style.display       = 'flex';
+    document.getElementById('navDividerAdmin').style.display = 'block';
+    document.getElementById('mmDividerAdmin').style.display  = 'block';
   }
 
-  showLauncher();
-}
-
-// ===== LAUNCHER =====
-function showLauncher() {
-  state.activeModule = null;
-  document.body.classList.remove('tareas-mode');
-  document.getElementById('launcherScreen').classList.add('visible');
-  document.getElementById('directorioWrap').style.display = 'none';
-  document.getElementById('tareasWrap').style.display = 'none';
-  document.getElementById('headerSwitchBtn').style.display = 'none';
-}
-
-async function openModule(mod) {
-  document.getElementById('launcherScreen').classList.remove('visible');
-  document.getElementById('headerSwitchBtn').style.display = 'flex';
-
-  if (mod === 'directorio') {
-    state.activeModule = 'directorio';
-    document.body.classList.remove('tareas-mode');
-    document.getElementById('directorioWrap').style.display = 'block';
-    document.getElementById('tareasWrap').style.display = 'none';
-    document.getElementById('headerSwitchLabel').textContent = '\uD83D\uDCCB Tareas';
-    await loadConfig();
-    await loadProveedores();
-  } else if (mod === 'tareas') {
-    state.activeModule = 'tareas';
-    document.body.classList.add('tareas-mode');
-    document.getElementById('directorioWrap').style.display = 'none';
-    document.getElementById('tareasWrap').style.display = 'block';
-    document.getElementById('headerSwitchLabel').textContent = '\uD83E\uDDC0 Directorio';
-    // Auto-procesar tareas pendientes al entrar
-    try {
-      await sbFetch('/rpc/process_pending_tasks_for_user', {
-        method: 'POST',
-        body: JSON.stringify({ target_user_id: state.currentUser.id })
-      });
-    } catch {}
-    await loadTareas();
-  }
-}
-
-function switchModule() {
-  if (state.activeModule === 'directorio') {
-    openModule('tareas');
-  } else if (state.activeModule === 'tareas') {
-    openModule('directorio');
-  } else {
-    showLauncher();
-  }
+  await loadConfig();
+  await loadProveedores();
+  showTab('proveedores');
 }
 
 function goHome() {
-  showLauncher();
+  showTab('proveedores');
 }
 
 // ===== USER DROPDOWN =====
@@ -180,10 +134,24 @@ function showTab(tab) {
   document.getElementById('paneProveedores').style.display   = tab === 'proveedores'   ? 'block' : 'none';
   document.getElementById('paneComisionistas').style.display = tab === 'comisionistas' ? 'block' : 'none';
   document.getElementById('paneRotulos').style.display       = tab === 'rotulos'       ? 'block' : 'none';
+  document.getElementById('paneTareas').style.display        = tab === 'tareas'        ? 'block' : 'none';
   document.getElementById('paneAdmin').style.display         = tab === 'admin'         ? 'block' : 'none';
+  document.body.classList.toggle('tareas-mode', tab === 'tareas');
   if (tab === 'admin')         loadUsers();
   if (tab === 'comisionistas') loadComisionistas();
   if (tab === 'rotulos')       loadRotulosScreen();
+  if (tab === 'tareas')        openTareasTab();
+}
+
+async function openTareasTab() {
+  // Auto-procesar tareas pendientes al entrar
+  try {
+    await sbFetch('/rpc/process_pending_tasks_for_user', {
+      method: 'POST',
+      body: JSON.stringify({ target_user_id: state.currentUser.id })
+    });
+  } catch {}
+  await loadTareas();
 }
 
 // ===== ANIMACION DE FONDO (LOGIN) =====
@@ -239,9 +207,7 @@ Object.assign(window, {
   // Auth
   doLogin, doLogout,
   // Navegacion
-  showTab, toggleMobileMenu, closeMobileMenu, closeModal,
-  // Launcher
-  openModule, switchModule, goHome, showLauncher,
+  showTab, toggleMobileMenu, closeMobileMenu, closeModal, goHome,
   // User dropdown & perfil
   toggleUserDropdown, closeUserDropdown, openProfile, saveProfile,
   // Proveedores
