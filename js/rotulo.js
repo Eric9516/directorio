@@ -432,14 +432,13 @@ export function renderRotuloPreviewTo(targetId, rd, pData, pContactsData, detall
         ${campos.direccion && pData.direccion ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Dirección:</strong> ${esc([pData.direccion, pData.localidad, pData.provincia, pData.codigo_postal ? 'CP ' + pData.codigo_postal : ''].filter(Boolean).join(', '))}</div>` : ''}
         ${campos.horario   && pData.horario   ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Horario:</strong> ${esc(pData.horario)}</div>` : ''}
         ${contact && campos.telefono && (contact.telefono || contact.celular) ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Contacto:</strong> ${esc(contact.nombre)}${contact.cargo ? ' (' + esc(contact.cargo) + ')' : ''}${contact.telefono ? ' — ' + esc(contact.telefono) : ''}${contact.celular ? ' / ' + esc(contact.celular) : ''}</div>` : ''}
-        ${hasEnvioInfo ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #ddd">
-          <div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:bold;margin-bottom:3px">Envío</div>
+        ${hasEnvioInfo ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #ddd">
           ${docLabel   ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(docLabel)}</strong></div>` : ''}
           ${valorLabel ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(valorLabel)}</strong></div>` : ''}
           ${bultoLabel ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(bultoLabel)}</strong></div>` : ''}
         </div>` : ''}
-        ${extraText  ? `<div style="font-size:12px;font-weight:bold;color:${rd.barColor};margin-bottom:4px;margin-top:${hasEnvioInfo ? '10px' : '0'}">⚠ ${esc(extraText)}</div>` : ''}
-        ${detalleText ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #ddd"><div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:bold;margin-bottom:3px">Detalle</div><div style="font-size:12px;color:${rd.textColor};white-space:pre-wrap">${esc(detalleText)}</div></div>` : ''}
+        ${extraText  ? `<div style="font-size:12px;font-weight:bold;color:${rd.barColor};margin-bottom:4px;margin-top:${hasEnvioInfo ? '8px' : '0'}">⚠ ${esc(extraText)}</div>` : ''}
+        ${detalleText ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #ddd"><div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:bold;margin-bottom:3px">Detalle</div><div style="font-size:12px;color:${rd.textColor};white-space:pre-wrap">${esc(detalleText)}</div></div>` : ''}
       </div>
       <div style="background:#f7f9fc;border-top:1px solid #ddd;padding:6px 14px;display:flex;justify-content:space-between;font-size:10px;color:#999">
         <span>${pie ? esc(pie) : esc(empresa)}</span>
@@ -543,10 +542,8 @@ function buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, l
   const { tipoDoc = '', numDoc = '', valorDeclarado = '', bultoN = '', bultoTotal = '' } = docInfo;
   const hasEnvioInfo = (tipoDoc && numDoc) || valorDeclarado || (bultoN && bultoTotal);
   if (hasEnvioInfo) {
-    y += 3;
-    doc.setDrawColor(200, 200, 200); doc.line(margin, y, w - margin, y); y += 4;
-    doc.setTextColor(120, 120, 120); doc.setFontSize(isSmall ? 6 : 8); doc.setFont('helvetica', 'bold');
-    doc.text('ENVÍO:', margin, y); y += lineH - 1;
+    y += 2;
+    doc.setDrawColor(200, 200, 200); doc.line(margin, y, w - margin, y); y += 3;
     doc.setFontSize(isSmall ? 7 : 10);
   }
   if (tipoDoc && numDoc) addLine(tipoDoc === 'remito' ? 'Remito N°' : 'Nota de despacho N°', numDoc);
@@ -560,8 +557,8 @@ function buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, l
   }
 
   if (detalle) {
-    y += 3;
-    doc.setDrawColor(200, 200, 200); doc.line(margin, y, w - margin, y); y += 4;
+    y += 2;
+    doc.setDrawColor(200, 200, 200); doc.line(margin, y, w - margin, y); y += 3;
     doc.setTextColor(120, 120, 120); doc.setFontSize(isSmall ? 6 : 8); doc.setFont('helvetica', 'bold');
     doc.text('DETALLE:', margin, y); y += lineH - 1;
     doc.setFont('helvetica', 'normal'); doc.setTextColor(txr, txg, txb); doc.setFontSize(isSmall ? 7 : 10);
