@@ -24,8 +24,11 @@ export async function doLogin() {
 
   try {
     await loadUserProfile(data.user.id, data.user.email);
-  } catch {
-    showAuthError('No se pudo cargar tu perfil. Verificá tu conexión e intentá de nuevo.');
+  } catch (e) {
+    ['sb_token', 'sb_refresh', 'sb_user_id', 'sb_user_email'].forEach(k => localStorage.removeItem(k));
+    showAuthError(e.message === 'BLOCKED'
+      ? 'Tu cuenta está desactivada. Contactá al administrador.'
+      : 'No se pudo cargar tu perfil. Verificá tu conexión e intentá de nuevo.');
     return;
   }
 
@@ -45,6 +48,7 @@ export async function loadUserProfile(uid, email) {
     try {
       const rows = await sbFetch(`/usuarios_perfil?id=eq.${uid}&select=*`);
       if (rows.length) {
+        if (rows[0].activo === false) throw new Error('BLOCKED');
         state.currentUser = rows[0];
         state.isAdmin = rows[0].rol === 'admin';
       } else {
@@ -53,6 +57,7 @@ export async function loadUserProfile(uid, email) {
       }
       return;
     } catch (err) {
+      if (err.message === 'BLOCKED') throw err; // definitivo, no reintentar
       lastErr = err;
       if (attempt < 3) await new Promise(r => setTimeout(r, 400 * attempt));
     }

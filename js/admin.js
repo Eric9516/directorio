@@ -2,6 +2,9 @@ import { sbFetch, SUPABASE_URL, SUPABASE_KEY } from './api.js';
 import { state } from './state.js';
 import { toast, closeModal, esc } from './ui.js';
 
+// Solo esta cuenta puede bloquear o eliminar otros usuarios.
+const OWNER_EMAIL = 'repuestos@sobreroycagnolo.com.ar';
+
 // ===== CAMPOS CUSTOM =====
 export function renderCamposCustomAdmin() {
   const list  = document.getElementById('camposCustomList');
@@ -74,6 +77,7 @@ export async function loadUsers() {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Sin usuarios registrados</td></tr>';
       return;
     }
+    const isOwner = state.currentUser?.email === OWNER_EMAIL;
     tbody.innerHTML = users.map(u => `
       <tr>
         <td><strong>${esc(u.nombre || '')} ${esc(u.apellido || '')}</strong></td>
@@ -81,8 +85,11 @@ export async function loadUsers() {
         <td><span class="badge ${u.rol === 'admin' ? 'badge-rubro' : 'badge-active'}">${u.rol === 'admin' ? 'Admin' : 'Usuario'}</span></td>
         <td><span class="badge ${u.activo !== false ? 'badge-active' : 'badge-inactive'}">${u.activo !== false ? 'Activo' : 'Inactivo'}</span></td>
         <td><div class="td-actions">
-          <button class="btn btn-ghost btn-sm" onclick="openUserModal('${u.id}')">Editar</button>
-          <button class="btn btn-danger-ghost btn-sm" onclick="toggleUserActivo('${u.id}',${u.activo !== false})">${u.activo !== false ? 'Desactivar' : 'Activar'}</button>
+          ${isOwner ? `<button class="btn btn-ghost btn-sm" onclick="openUserModal('${u.id}')">Editar</button>` : ''}
+          ${isOwner && u.id !== state.currentUser?.id ? `
+          <button class="btn btn-danger-ghost btn-sm" onclick="toggleUserActivo('${u.id}',${u.activo !== false})">${u.activo !== false ? 'Bloquear' : 'Desbloquear'}</button>
+          <button class="btn btn-danger-ghost btn-sm" onclick="deleteUserAccount('${u.id}')">Eliminar</button>` : ''}
+          ${!isOwner && u.id === state.currentUser?.id ? '<span style="font-size:12px;color:var(--text-muted)">Editá tu nombre desde "Mi perfil"</span>' : ''}
         </div></td>
       </tr>`).join('');
   } catch { toast('Error al cargar usuarios', 'error'); }
@@ -134,11 +141,32 @@ export async function saveUser() {
 }
 
 export async function toggleUserActivo(id, isActive) {
+  if (id === state.currentUser?.id) { toast('No podés bloquear tu propia cuenta', 'error'); return; }
+  if (state.currentUser?.email !== OWNER_EMAIL) { toast('Solo el propietario puede bloquear usuarios', 'error'); return; }
   try {
     await sbFetch(`/usuarios_perfil?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ activo: !isActive }) });
-    toast(isActive ? 'Usuario desactivado' : 'Usuario activado', 'success');
+    toast(isActive ? 'Usuario bloqueado' : 'Usuario desbloqueado', 'success');
     loadUsers();
   } catch { toast('Error al actualizar usuario', 'error'); }
+}
+
+export async function deleteUserAccount(id) {
+  if (id === state.currentUser?.id) { toast('No podés eliminar tu propia cuenta', 'error'); return; }
+  if (state.currentUser?.email !== OWNER_EMAIL) { toast('Solo el propietario puede eliminar usuarios', 'error'); return; }
+  if (!confirm('¿Eliminar este usuario definitivamente? Esta acción no se puede deshacer.')) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-user`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${localStorage.getItem('sb_token')}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: id })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al eliminar usuario');
+    toast('Usuario eliminado', 'error');
+    loadUsers();
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  }
 }
 
 export function initAdminRotuloPanel() {}

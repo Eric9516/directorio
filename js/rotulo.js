@@ -710,6 +710,7 @@ export function vistaPreviaRotuloGuardado(numero) {
 
 // ===== PANTALLA "RÓTULOS" (todas las notas de todos los proveedores) =====
 let rotulosScreenCache = [];
+let usuariosCache = [];
 
 export async function loadRotulosScreen() {
   const sel = document.getElementById('rotFiltroProveedor');
@@ -725,13 +726,16 @@ export async function loadRotulosScreen() {
     selCom.innerHTML = '<option value="">Todos los comisionistas</option><option value="sin_comisionista">Sin comisionista</option>' +
       coms.map(c => `<option value="${c.id}">${esc(c.empresa || c.nombre)}</option>`).join('');
   }
+  if (!usuariosCache.length) {
+    try { usuariosCache = await sbFetch('/usuarios_perfil?select=id,nombre,apellido'); } catch { usuariosCache = []; }
+  }
   const tbody = document.getElementById('rotulosTableBody');
-  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Cargando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Cargando...</td></tr>';
   try {
     rotulosScreenCache = await sbFetch('/rotulos_generados?vigente=eq.true&select=*&order=created_at.desc&limit=300');
     renderRotulosScreen();
   } catch {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger)">Error al cargar los rótulos.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--danger)">Error al cargar los rótulos.</td></tr>';
   }
 }
 
@@ -760,7 +764,7 @@ export function renderRotulosScreen() {
 
   if (!filtered.length) {
     const emptyMsg = '<div class="empty-state"><div class="empty-icon">📦</div><h3>Sin envíos</h3><p>No hay envíos que coincidan con el filtro.</p></div>';
-    tbody.innerHTML = `<tr><td colspan="7">${emptyMsg}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8">${emptyMsg}</td></tr>`;
     if (cards) cards.innerHTML = emptyMsg;
     return;
   }
@@ -768,6 +772,7 @@ export function renderRotulosScreen() {
   const rowsData = filtered.map(r => {
     const prov  = state.proveedores.find(p => p.id === r.proveedor_id);
     const com   = state.comisionistas.find(c => c.id === r.comisionista_id);
+    const autor = usuariosCache.find(u => u.id === r.creado_por);
     const fecha = new Date(r.created_at).toLocaleDateString('es-AR');
     const doc   = r.tipo_documento ? `${r.tipo_documento === 'remito' ? 'Remito' : 'Nota de despacho'} ${r.numero_documento || ''}`.trim() : '—';
     const bulto = r.bulto_total > 1 ? `${r.bulto_total} bultos` : '1 bulto';
@@ -778,16 +783,17 @@ export function renderRotulosScreen() {
       ${r.version > 1 ? `<button class="btn btn-ghost btn-sm btn-icon" title="Historial de versiones" onclick="verVersionesRotulo('${r.grupo_id}')">🕘</button>` : ''}
       <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="editRotuloGuardado('${r.id}')">✏️</button>
       <button class="btn btn-ghost btn-sm btn-icon" title="Eliminar" onclick="deleteRotuloGuardado('${r.grupo_id}')">🗑️</button>` : '';
-    return { r, prov, com, fecha, doc, bulto, verBtn, adminBtns };
+    return { r, prov, com, autor, fecha, doc, bulto, verBtn, adminBtns };
   });
 
-  tbody.innerHTML = rowsData.map(({ r, prov, com, fecha, doc, bulto, verBtn, adminBtns }) => `<tr>
+  tbody.innerHTML = rowsData.map(({ r, prov, com, autor, fecha, doc, bulto, verBtn, adminBtns }) => `<tr>
       <td>${esc(prov?.nombre || '(proveedor eliminado)')}</td>
       <td>${com ? esc(com.empresa || com.nombre) : '—'}</td>
       <td>${esc(doc)}${r.version > 1 ? ` <span class="badge badge-rubro">v${r.version}</span>` : ''}</td>
       <td>${esc(bulto)}</td>
       <td>${r.version}</td>
       <td>${fecha}</td>
+      <td>${autor ? esc(`${autor.nombre || ''} ${autor.apellido || ''}`.trim()) : '—'}</td>
       <td><div class="td-actions">
         ${verBtn}
         <button class="btn btn-ghost btn-sm btn-icon" title="Fotos del envío" onclick="abrirFotosRotulo('${r.grupo_id}','${r.proveedor_id}')">📷</button>
@@ -796,7 +802,7 @@ export function renderRotulosScreen() {
     </tr>`).join('');
 
   if (cards) {
-    cards.innerHTML = rowsData.map(({ r, prov, com, fecha, doc, bulto, verBtn, adminBtns }) => `<div class="prov-card">
+    cards.innerHTML = rowsData.map(({ r, prov, com, autor, fecha, doc, bulto, verBtn, adminBtns }) => `<div class="prov-card">
       <div class="prov-card-header">
         <div><div class="prov-card-name">${esc(prov?.nombre || '(proveedor eliminado)')}</div>${r.version > 1 ? `<span class="badge badge-rubro" style="margin-top:4px;display:inline-flex">v${r.version}</span>` : ''}</div>
         <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${fecha}</span>
@@ -805,6 +811,7 @@ export function renderRotulosScreen() {
         <div class="prov-card-row">📄 ${esc(doc)}</div>
         <div class="prov-card-row">📦 ${esc(bulto)}</div>
         ${com ? `<div class="prov-card-row">🤝 ${esc(com.empresa || com.nombre)}</div>` : ''}
+        ${autor ? `<div class="prov-card-row">👤 ${esc(`${autor.nombre || ''} ${autor.apellido || ''}`.trim())}</div>` : ''}
       </div>
       <div class="prov-card-actions">
         ${verBtn}

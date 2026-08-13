@@ -57,7 +57,9 @@ Deno.serve(async (req) => {
     });
     if (createErr) throw createErr;
 
-    const { error: insertErr } = await supabaseAdmin.from('usuarios_perfil').insert({
+    // upsert (no insert): si un trigger de la base ya creó una fila vacía
+    // para este usuario al crearse en auth, esto la completa en vez de chocar.
+    const { error: insertErr } = await supabaseAdmin.from('usuarios_perfil').upsert({
       id: created.user.id,
       nombre,
       apellido: apellido || '',

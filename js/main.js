@@ -9,7 +9,7 @@ import { loadProveedores, renderProveedores,
 import { loadComisionistas, renderComisionistas,
          openComModal, saveComisionista, deleteCom,
          openDetailCom, exportExcelCom }                             from './comisionistas.js';
-import { loadUsers, openUserModal, saveUser, toggleUserActivo,
+import { loadUsers, openUserModal, saveUser, toggleUserActivo, deleteUserAccount,
          addCampoCustomRow, removeCampoCustomRow, saveCamposCustom } from './admin.js';
 import { openRotulo, selectSize, selectDesignSize, updateAdminPreview,
          saveRotuloDesignFromAdmin, resetRotuloDesign, onCustomSizeInput,
@@ -194,7 +194,13 @@ window.addEventListener('load', async () => {
     try {
       await loadUserProfile(uid, email);
       await initApp();
-    } catch {}
+    } catch (e) {
+      ['sb_token', 'sb_refresh', 'sb_user_id', 'sb_user_email'].forEach(k => localStorage.removeItem(k));
+      if (e.message === 'BLOCKED') {
+        document.getElementById('authError').textContent = 'Tu cuenta está desactivada. Contactá al administrador.';
+        document.getElementById('authError').style.display = 'block';
+      }
+    }
   }
 });
 
@@ -215,7 +221,7 @@ Object.assign(window, {
   // Comisionistas
   renderComisionistas, openComModal, saveComisionista, deleteCom, openDetailCom, exportExcelCom,
   // Admin
-  loadUsers, openUserModal, saveUser, toggleUserActivo,
+  loadUsers, openUserModal, saveUser, toggleUserActivo, deleteUserAccount,
   addCampoCustomRow, removeCampoCustomRow, saveCamposCustom,
   // Config
   saveConfig, handleLogoUpload,
