@@ -113,14 +113,13 @@ export async function saveUser() {
   if (!state.editingUserId) {
     if (!pass || pass.length < 6) { toast('La contraseña debe tener al menos 6 caracteres', 'error'); return; }
     try {
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
         method: 'POST',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${localStorage.getItem('sb_token')}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: pass, email_confirm: true })
+        body: JSON.stringify({ email, password: pass, nombre, apellido, rol })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.msg || 'Error al crear usuario');
-      await sbFetch('/usuarios_perfil', { method: 'POST', body: JSON.stringify({ id: data.id, nombre, apellido, email, rol, activo: true }) });
+      if (!res.ok) throw new Error(data.error || 'Error al crear usuario');
       toast('Usuario creado', 'success');
     } catch (e) { toast('Error: ' + e.message, 'error'); return; }
   } else {
