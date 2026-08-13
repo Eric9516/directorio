@@ -415,66 +415,11 @@
 }
 
 /* ===== BOTTOM NAV (mobile) ===== */
-.bottom-nav {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--white);
-  border-top: 1.5px solid var(--border);
-  z-index: 150;
-  padding: 6px 8px;
-  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
-  box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
-}
-
-.bottom-nav-items {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-.bottom-nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px 12px;
-  background: none;
-  border: none;
-  font-family: var(--font);
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: color 0.15s;
-  position: relative;
-  border-radius: 8px;
-}
-.bottom-nav-item:hover { color: var(--blue); }
-.bottom-nav-item.active { color: var(--blue); }
-.bottom-nav-item.active::after {
-  content: '';
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 3px;
-  background: var(--red);
-  border-radius: 0 0 3px 3px;
-}
-
-.bottom-nav-icon { font-size: 20px; line-height: 1; }
-
 /* ===== FAB ===== */
 .fab-new-task {
   display: none;
   position: fixed;
-  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   right: 16px;
   width: 52px;
   height: 52px;
@@ -506,20 +451,14 @@
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-  body.tareas-mode .bottom-nav { display: block; }
   body.tareas-mode .fab-new-task { display: flex; }
-  body.tareas-mode .app-main { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+  body.tareas-mode .app-main { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 
   .tareas-stats { grid-template-columns: repeat(2, 1fr); }
 
   .vista-selector { display: none; }
 
   .task-list.view-grid { grid-template-columns: 1fr; }
-
-  .launcher-cards { grid-template-columns: 1fr; gap: 12px; }
-  .launcher-card { padding: 24px 16px; flex-direction: row; text-align: left; }
-  .launcher-card-icon { font-size: 32px; }
-  .launcher-title { font-size: 22px; margin-bottom: 24px; }
 }
 
 @media (max-width: 480px) {

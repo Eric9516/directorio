@@ -22,7 +22,6 @@ import { openRotulo, selectSize, selectDesignSize, updateAdminPreview,
 import { loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
          openTaskDetail, completeTask, cancelTask,
          openReprogramModal, saveReprogram,
-         openDayClose, processPendingTasks, showTareasTab,
          toggleVistaDropdown, setTaskView }          from './tareas.js';
 import { sbFetch } from './api.js';
 
@@ -232,7 +231,6 @@ Object.assign(window, {
   loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
   openTaskDetail, completeTask, cancelTask,
   openReprogramModal, saveReprogram,
-  openDayClose, processPendingTasks, showTareasTab,
   toggleVistaDropdown, setTaskView,
   _currentTaskId: () => state.currentTaskId,
 });

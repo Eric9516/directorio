@@ -326,61 +326,6 @@ export async function saveReprogram() {
   }
 }
 
-// ===== CIERRE DEL DIA =====
-export async function openDayClose() {
-  const pending = state.tareas.filter(t => t.status === 'pending');
-  const completedToday = state.tareas.filter(t =>
-    t.status === 'completed' && t.completed_at && t.completed_at.slice(0, 10) === todayStr()
-  );
-  const toCarry = pending.filter(t => t.assigned_date < todayStr());
-  const stagnant = pending.filter(t => t.is_stagnant);
-
-  document.getElementById('dayCloseBody').innerHTML = `
-    <div class="tareas-stats" style="margin-bottom:16px">
-      <div class="tareas-stat">
-        <div class="tareas-stat-number green">${completedToday.length}</div>
-        <div class="tareas-stat-label">Completadas hoy</div>
-      </div>
-      <div class="tareas-stat">
-        <div class="tareas-stat-number blue">${pending.length}</div>
-        <div class="tareas-stat-label">Pendientes</div>
-      </div>
-      <div class="tareas-stat">
-        <div class="tareas-stat-number yellow">${toCarry.length}</div>
-        <div class="tareas-stat-label">Se arrastran</div>
-      </div>
-      <div class="tareas-stat">
-        <div class="tareas-stat-number red">${stagnant.length}</div>
-        <div class="tareas-stat-label">Estancadas</div>
-      </div>
-    </div>
-    ${toCarry.length > 0 ? `
-    <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:8px">\ud83d\udd04 Tareas que se arrastran</div>
-      ${toCarry.map(t => `<div style="font-size:13px;padding:4px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
-        <span>${esc(t.title)}</span>
-        <span class="traffic-badge ${t.traffic_level}" style="flex-shrink:0">${trafficLabel(t.traffic_level)}</span>
-      </div>`).join('')}
-    </div>` : '<p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">\u2705 No hay tareas para arrastrar.</p>'}
-    ${toCarry.length > 0 ? `<button class="btn btn-primary btn-full" onclick="processPendingTasks()">\ud83d\udd04 Actualizar tareas pendientes</button>` : ''}
-  `;
-
-  document.getElementById('modalDayClose').classList.add('open');
-}
-
-export async function processPendingTasks() {
-  try {
-    const result = await sbFetch('/rpc/process_pending_tasks_for_user', {
-      method: 'POST',
-      body: JSON.stringify({ target_user_id: state.currentUser.id })
-    });
-    toast(`${result} tarea(s) actualizada(s)`, 'success');
-    closeModal('modalDayClose');
-    await loadTareas();
-  } catch (e) {
-    toast('Error: ' + e.message, 'error');
-  }
-}
 
 // ===== VISTA SELECTOR =====
 export function toggleVistaDropdown() {
@@ -400,26 +345,3 @@ document.addEventListener('click', e => {
   if (dd && sel && !sel.contains(e.target)) dd.classList.remove('open');
 });
 
-// ===== BOTTOM NAV =====
-export function showTareasTab(tab) {
-  document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
-  const activeBtn = document.querySelector(`.bottom-nav-item[data-tab="${tab}"]`);
-  if (activeBtn) activeBtn.classList.add('active');
-
-  switch (tab) {
-    case 'hoy':
-      currentFilter = 'todas';
-      document.querySelectorAll('.tareas-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === 'todas'));
-      loadTareas();
-      break;
-    case 'nueva':
-      openNewTaskModal();
-      break;
-    case 'cierre':
-      openDayClose();
-      break;
-    case 'perfil':
-      window.openProfile();
-      break;
-  }
-}

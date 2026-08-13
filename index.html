@@ -370,27 +370,8 @@
     </div>
   </main>
 
-  <!-- ===== BOTTOM NAV (mobile, solo en tareas) ===== -->
-  <nav class="bottom-nav">
-    <div class="bottom-nav-items">
-      <button class="bottom-nav-item active" data-tab="hoy" onclick="showTareasTab('hoy')">
-        <span class="bottom-nav-icon">🚦</span>
-        Hoy
-      </button>
-      <button class="bottom-nav-item" data-tab="nueva" onclick="showTareasTab('nueva')">
-        <span class="bottom-nav-icon">➕</span>
-        Nueva
-      </button>
-      <button class="bottom-nav-item" data-tab="cierre" onclick="showTareasTab('cierre')">
-        <span class="bottom-nav-icon">📊</span>
-        Cierre
-      </button>
-      <button class="bottom-nav-item" data-tab="perfil" onclick="showTareasTab('perfil')">
-        <span class="bottom-nav-icon">👤</span>
-        Perfil
-      </button>
-    </div>
-  </nav>
+  <!-- ===== BOTÓN FLOTANTE "NUEVA TAREA" (mobile, solo en tareas) ===== -->
+  <button class="fab-new-task" onclick="openNewTaskModal()" aria-label="Nueva tarea">+</button>
 
 </div>
 
@@ -923,20 +904,6 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modalReprogram')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveReprogram()">Reprogramar</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== MODAL: CIERRE DEL DÍA ===== -->
-<div class="modal-overlay" id="modalDayClose">
-  <div class="modal modal-lg">
-    <div class="modal-header">
-      <div class="modal-title"><span class="accent">📊</span> Cierre del día</div>
-      <button class="btn-close" onclick="closeModal('modalDayClose')">✕</button>
-    </div>
-    <div id="dayCloseBody"></div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modalDayClose')">Cerrar</button>
     </div>
   </div>
 </div>
