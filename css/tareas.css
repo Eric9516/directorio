@@ -453,6 +453,7 @@
 @media (max-width: 768px) {
   body.tareas-mode .fab-new-task { display: flex; }
   body.tareas-mode .app-main { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  #paneTareas .section-header { display: none; }
 
   .tareas-stats { grid-template-columns: repeat(2, 1fr); }
 
