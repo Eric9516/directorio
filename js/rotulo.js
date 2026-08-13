@@ -191,9 +191,9 @@ function populateComisionistaSelect() {
   const sel = document.getElementById('rotuloComisionista');
   if (!sel) return;
   const cur = sel.value;
-  const comisionistas = [...state.comisionistas].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+  const comisionistas = [...state.comisionistas].sort((a, b) => (a.empresa || a.nombre || '').localeCompare(b.empresa || b.nombre || ''));
   sel.innerHTML = '<option value="">Sin comisionista</option>' +
-    comisionistas.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    comisionistas.map(c => `<option value="${c.id}">${esc(c.empresa || c.nombre)}</option>`).join('');
   sel.value = cur;
 }
 
@@ -724,9 +724,9 @@ export async function loadRotulosScreen() {
   if (!state.comisionistas.length) await loadComisionistas();
   const selCom = document.getElementById('rotFiltroComisionista');
   if (selCom && selCom.options.length <= 2) {
-    const coms = [...state.comisionistas].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+    const coms = [...state.comisionistas].sort((a, b) => (a.empresa || a.nombre || '').localeCompare(b.empresa || b.nombre || ''));
     selCom.innerHTML = '<option value="">Todos los comisionistas</option><option value="sin_comisionista">Sin comisionista</option>' +
-      coms.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+      coms.map(c => `<option value="${c.id}">${esc(c.empresa || c.nombre)}</option>`).join('');
   }
   const tbody = document.getElementById('rotulosTableBody');
   tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Cargando...</td></tr>';
@@ -786,7 +786,7 @@ export function renderRotulosScreen() {
 
   tbody.innerHTML = rowsData.map(({ r, prov, com, fecha, doc, bulto, verBtn, adminBtns }) => `<tr>
       <td>${esc(prov?.nombre || '(proveedor eliminado)')}</td>
-      <td>${com ? esc(com.nombre) : '—'}</td>
+      <td>${com ? esc(com.empresa || com.nombre) : '—'}</td>
       <td>${esc(doc)}${r.version > 1 ? ` <span class="badge badge-rubro">v${r.version}</span>` : ''}</td>
       <td>${esc(bulto)}</td>
       <td>${r.version}</td>
@@ -807,7 +807,7 @@ export function renderRotulosScreen() {
       <div class="prov-card-body">
         <div class="prov-card-row">📄 ${esc(doc)}</div>
         <div class="prov-card-row">📦 ${esc(bulto)}</div>
-        ${com ? `<div class="prov-card-row">🤝 ${esc(com.nombre)}</div>` : ''}
+        ${com ? `<div class="prov-card-row">🤝 ${esc(com.empresa || com.nombre)}</div>` : ''}
       </div>
       <div class="prov-card-actions">
         ${verBtn}
