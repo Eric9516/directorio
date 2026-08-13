@@ -1,6 +1,7 @@
 import { sbFetch, sbStorageUpload, sbStorageDelete, SUPABASE_URL } from './api.js';
-import { state }    from './state.js';
-import { toast }    from './ui.js';
+import { state }             from './state.js';
+import { toast }             from './ui.js';
+import { loadComisionistas } from './comisionistas.js';
 
 export const DEFAULT_DESIGN = {
   headerBg:    '#1a3a6b', barColor:    '#c8222a', barHeight:   4,
@@ -186,7 +187,17 @@ export function onCustomSizeInput(ctx) {
 }
 
 // ===== MODAL RÓTULO (usuario) =====
-export function openRotulo(id) {
+function populateComisionistaSelect() {
+  const sel = document.getElementById('rotuloComisionista');
+  if (!sel) return;
+  const cur = sel.value;
+  const comisionistas = [...state.comisionistas].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+  sel.innerHTML = '<option value="">Sin comisionista</option>' +
+    comisionistas.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+  sel.value = cur;
+}
+
+export async function openRotulo(id) {
   state.rotuloProvId = id;
   state.rotuloEditando = null;
   state.rotuloGuardadoActual = null;
@@ -194,6 +205,7 @@ export function openRotulo(id) {
   document.getElementById('rotuloTipoDoc').value    = '';
   document.getElementById('rotuloNumDoc').value     = '';
   document.getElementById('rotuloValorDeclarado').value = '';
+  document.getElementById('rotuloComisionista').value   = '';
   document.getElementById('rotuloBultoTotal').value = '1';
   document.getElementById('rotuloMotivoEdicion').value = '';
   document.getElementById('rotuloMotivoWrap').style.display = 'none';
@@ -206,8 +218,13 @@ export function openRotulo(id) {
   const hEl = document.getElementById('rotulo_h');
   if (wEl) wEl.value = '21';
   if (hEl) hEl.value = '29.7';
+  populateComisionistaSelect();
   renderRotuloPreview();
   document.getElementById('modalRotulo').classList.add('open');
+  if (!state.comisionistas.length) {
+    await loadComisionistas();
+    populateComisionistaSelect();
+  }
 }
 
 function resetRotuloDescargas() {
@@ -263,6 +280,10 @@ export async function editRotuloGuardado(id) {
     document.getElementById('rotuloMotivoWrap').style.display = 'block';
     resetRotuloDescargas();
     renderBultoDetalleFields(false, bultos.map(b => b.detalle || ''));
+
+    if (!state.comisionistas.length) await loadComisionistas();
+    populateComisionistaSelect();
+    document.getElementById('rotuloComisionista').value = r.comisionista_id || '';
 
     document.querySelectorAll('#modalRotulo .size-btn').forEach(b => b.classList.remove('active'));
     const wEl = document.getElementById('rotulo_w');
@@ -327,8 +348,9 @@ function getDocInfo() {
   const tipoDoc        = document.getElementById('rotuloTipoDoc')?.value || '';
   const numDoc         = document.getElementById('rotuloNumDoc')?.value.trim() || '';
   const valorDeclarado = document.getElementById('rotuloValorDeclarado')?.value.trim() || '';
+  const comisionistaId = document.getElementById('rotuloComisionista')?.value || '';
   const bultoTotal     = document.getElementById('rotuloBultoTotal')?.value || '1';
-  return { tipoDoc, numDoc, valorDeclarado, bultoTotal };
+  return { tipoDoc, numDoc, valorDeclarado, comisionistaId, bultoTotal };
 }
 
 function slugifyProv(nombre, id) {
@@ -376,9 +398,10 @@ export function renderRotuloPreviewTo(targetId, rd, pData, pContactsData, detall
   const el = document.getElementById(targetId);
   if (!el) return;
   const { tipoDoc = '', numDoc = '', valorDeclarado = '', bultoN = '', bultoTotal = '' } = docInfo;
-  const docLabel   = tipoDoc && numDoc ? `${tipoDoc === 'remito' ? 'Remito' : 'Nota de despacho'} N°: ${numDoc}` : '';
-  const valorLabel = valorDeclarado ? `Valor declarado: ${valorDeclarado}` : '';
-  const bultoLabel = bultoN && bultoTotal ? `Bulto: ${bultoN}/${bultoTotal}` : '';
+  const docLabel     = tipoDoc && numDoc ? `${tipoDoc === 'remito' ? 'Remito' : 'Nota de despacho'} N°: ${numDoc}` : '';
+  const valorLabel   = valorDeclarado ? `Valor declarado: ${valorDeclarado}` : '';
+  const bultoLabel   = bultoN && bultoTotal ? `Bulto: ${bultoN}/${bultoTotal}` : '';
+  const hasEnvioInfo = docLabel || valorLabel || bultoLabel;
 
   const campos  = state.configData.rotulo_campos || { horario: true, direccion: true, telefono: true };
   const pie     = state.configData.rotulo_pie    || '';
@@ -409,10 +432,13 @@ export function renderRotuloPreviewTo(targetId, rd, pData, pContactsData, detall
         ${campos.direccion && pData.direccion ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Dirección:</strong> ${esc([pData.direccion, pData.localidad, pData.provincia, pData.codigo_postal ? 'CP ' + pData.codigo_postal : ''].filter(Boolean).join(', '))}</div>` : ''}
         ${campos.horario   && pData.horario   ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Horario:</strong> ${esc(pData.horario)}</div>` : ''}
         ${contact && campos.telefono && (contact.telefono || contact.celular) ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>Contacto:</strong> ${esc(contact.nombre)}${contact.cargo ? ' (' + esc(contact.cargo) + ')' : ''}${contact.telefono ? ' — ' + esc(contact.telefono) : ''}${contact.celular ? ' / ' + esc(contact.celular) : ''}</div>` : ''}
-        ${docLabel   ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(docLabel)}</strong></div>` : ''}
-        ${valorLabel ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(valorLabel)}</strong></div>` : ''}
-        ${bultoLabel ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(bultoLabel)}</strong></div>` : ''}
-        ${extraText  ? `<div style="font-size:12px;font-weight:bold;color:${rd.barColor};margin-bottom:4px">⚠ ${esc(extraText)}</div>` : ''}
+        ${hasEnvioInfo ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #ddd">
+          <div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:bold;margin-bottom:3px">Envío</div>
+          ${docLabel   ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(docLabel)}</strong></div>` : ''}
+          ${valorLabel ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(valorLabel)}</strong></div>` : ''}
+          ${bultoLabel ? `<div style="font-size:12px;color:${rd.textColor};margin-bottom:4px"><strong>${esc(bultoLabel)}</strong></div>` : ''}
+        </div>` : ''}
+        ${extraText  ? `<div style="font-size:12px;font-weight:bold;color:${rd.barColor};margin-bottom:4px;margin-top:${hasEnvioInfo ? '10px' : '0'}">⚠ ${esc(extraText)}</div>` : ''}
         ${detalleText ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #ddd"><div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:bold;margin-bottom:3px">Detalle</div><div style="font-size:12px;color:${rd.textColor};white-space:pre-wrap">${esc(detalleText)}</div></div>` : ''}
       </div>
       <div style="background:#f7f9fc;border-top:1px solid #ddd;padding:6px 14px;display:flex;justify-content:space-between;font-size:10px;color:#999">
@@ -515,6 +541,14 @@ function buildPDF(doc, p, rd, pContacts, campos, detalle, extra, pie, empresa, l
   }
 
   const { tipoDoc = '', numDoc = '', valorDeclarado = '', bultoN = '', bultoTotal = '' } = docInfo;
+  const hasEnvioInfo = (tipoDoc && numDoc) || valorDeclarado || (bultoN && bultoTotal);
+  if (hasEnvioInfo) {
+    y += 3;
+    doc.setDrawColor(200, 200, 200); doc.line(margin, y, w - margin, y); y += 4;
+    doc.setTextColor(120, 120, 120); doc.setFontSize(isSmall ? 6 : 8); doc.setFont('helvetica', 'bold');
+    doc.text('ENVÍO:', margin, y); y += lineH - 1;
+    doc.setFontSize(isSmall ? 7 : 10);
+  }
   if (tipoDoc && numDoc) addLine(tipoDoc === 'remito' ? 'Remito N°' : 'Nota de despacho N°', numDoc);
   if (valorDeclarado) addLine('Valor declarado', valorDeclarado);
   if (bultoN && bultoTotal) addLine('Bulto', `${bultoN}/${bultoTotal}`);
@@ -561,6 +595,10 @@ export async function guardarRotulo() {
     if (!motivo) { toast('Contá el motivo de la edición antes de guardar', 'error'); return; }
   }
 
+  if (!document.getElementById('rotuloComisionista')?.value) {
+    if (!confirm('No seleccionaste un comisionista para este envío. ¿Guardar igual?')) return;
+  }
+
   const rd            = getCurrentDesign();
   const [w, h]         = getRotuloWH();
   const pContacts      = state.contactos.filter(c => c.proveedor_id === p.id);
@@ -585,7 +623,7 @@ export async function guardarRotulo() {
       if (lbl) lbl.textContent = total > 1 ? `Guardando bulto ${i + 1}/${total}...` : 'Guardando...';
       const doc = new jsPDF({ orientation: w > h ? 'landscape' : 'portrait', unit: 'mm', format: [w, h] });
       buildPDF(doc, p, rd, pContacts, campos, bultosDetalle[i], extra, pie, empresa, logo, fecha, w, h,
-        { tipoDoc: docInfo.tipoDoc, numDoc: docInfo.numDoc,
+        { tipoDoc: docInfo.tipoDoc, numDoc: docInfo.numDoc, valorDeclarado: docInfo.valorDeclarado,
           bultoN: total > 1 ? String(i + 1) : '', bultoTotal: total > 1 ? String(total) : '' });
       const blob = doc.output('blob');
       const path = `${slugifyProv(p.nombre, p.id)}/${Date.now()}_bulto${i + 1}de${total}_${w}x${h}mm.pdf`;
@@ -598,6 +636,7 @@ export async function guardarRotulo() {
       tipo_documento:   docInfo.tipoDoc || null,
       numero_documento: docInfo.numDoc  || null,
       valor_declarado:  docInfo.valorDeclarado || null,
+      comisionista_id:  docInfo.comisionistaId || null,
       bulto_total:      total,
       extra:            extra || null,
       ancho_mm:         w,
@@ -682,13 +721,20 @@ export async function loadRotulosScreen() {
     sel.innerHTML = '<option value="">Todos los proveedores</option>' +
       provs.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
   }
+  if (!state.comisionistas.length) await loadComisionistas();
+  const selCom = document.getElementById('rotFiltroComisionista');
+  if (selCom && selCom.options.length <= 2) {
+    const coms = [...state.comisionistas].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+    selCom.innerHTML = '<option value="">Todos los comisionistas</option><option value="sin_comisionista">Sin comisionista</option>' +
+      coms.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+  }
   const tbody = document.getElementById('rotulosTableBody');
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Cargando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Cargando...</td></tr>';
   try {
     rotulosScreenCache = await sbFetch('/rotulos_generados?vigente=eq.true&select=*&order=created_at.desc&limit=300');
     renderRotulosScreen();
   } catch {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--danger)">Error al cargar los rótulos.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger)">Error al cargar los rótulos.</td></tr>';
   }
 }
 
@@ -699,6 +745,7 @@ export function renderRotulosScreen() {
 
   const numDoc  = document.getElementById('rotSearchNumDoc')?.value.trim().toLowerCase() || '';
   const provId  = document.getElementById('rotFiltroProveedor')?.value || '';
+  const comId   = document.getElementById('rotFiltroComisionista')?.value || '';
   const tipoDoc = document.getElementById('rotFiltroTipoDoc')?.value || '';
   const desde   = document.getElementById('rotFiltroDesde')?.value || '';
   const hasta   = document.getElementById('rotFiltroHasta')?.value || '';
@@ -706,22 +753,24 @@ export function renderRotulosScreen() {
   const filtered = rotulosScreenCache.filter(r => {
     const matchNum   = !numDoc  || (r.numero_documento || '').toLowerCase().includes(numDoc);
     const matchProv  = !provId  || r.proveedor_id === provId;
+    const matchCom   = !comId   || (comId === 'sin_comisionista' ? !r.comisionista_id : r.comisionista_id === comId);
     const matchTipo  = !tipoDoc || r.tipo_documento === tipoDoc;
     const fecha      = r.created_at.slice(0, 10);
     const matchDesde = !desde || fecha >= desde;
     const matchHasta = !hasta || fecha <= hasta;
-    return matchNum && matchProv && matchTipo && matchDesde && matchHasta;
+    return matchNum && matchProv && matchCom && matchTipo && matchDesde && matchHasta;
   });
 
   if (!filtered.length) {
     const emptyMsg = '<div class="empty-state"><div class="empty-icon">📦</div><h3>Sin envíos</h3><p>No hay envíos que coincidan con el filtro.</p></div>';
-    tbody.innerHTML = `<tr><td colspan="6">${emptyMsg}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7">${emptyMsg}</td></tr>`;
     if (cards) cards.innerHTML = emptyMsg;
     return;
   }
 
   const rowsData = filtered.map(r => {
     const prov  = state.proveedores.find(p => p.id === r.proveedor_id);
+    const com   = state.comisionistas.find(c => c.id === r.comisionista_id);
     const fecha = new Date(r.created_at).toLocaleDateString('es-AR');
     const doc   = r.tipo_documento ? `${r.tipo_documento === 'remito' ? 'Remito' : 'Nota de despacho'} ${r.numero_documento || ''}`.trim() : '—';
     const bulto = r.bulto_total > 1 ? `${r.bulto_total} bultos` : '1 bulto';
@@ -732,11 +781,12 @@ export function renderRotulosScreen() {
       ${r.version > 1 ? `<button class="btn btn-ghost btn-sm btn-icon" title="Historial de versiones" onclick="verVersionesRotulo('${r.grupo_id}')">🕘</button>` : ''}
       <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="editRotuloGuardado('${r.id}')">✏️</button>
       <button class="btn btn-ghost btn-sm btn-icon" title="Eliminar" onclick="deleteRotuloGuardado('${r.grupo_id}')">🗑️</button>` : '';
-    return { r, prov, fecha, doc, bulto, verBtn, adminBtns };
+    return { r, prov, com, fecha, doc, bulto, verBtn, adminBtns };
   });
 
-  tbody.innerHTML = rowsData.map(({ r, prov, fecha, doc, bulto, verBtn, adminBtns }) => `<tr>
+  tbody.innerHTML = rowsData.map(({ r, prov, com, fecha, doc, bulto, verBtn, adminBtns }) => `<tr>
       <td>${esc(prov?.nombre || '(proveedor eliminado)')}</td>
+      <td>${com ? esc(com.nombre) : '—'}</td>
       <td>${esc(doc)}${r.version > 1 ? ` <span class="badge badge-rubro">v${r.version}</span>` : ''}</td>
       <td>${esc(bulto)}</td>
       <td>${r.version}</td>
@@ -749,7 +799,7 @@ export function renderRotulosScreen() {
     </tr>`).join('');
 
   if (cards) {
-    cards.innerHTML = rowsData.map(({ r, prov, fecha, doc, bulto, verBtn, adminBtns }) => `<div class="prov-card">
+    cards.innerHTML = rowsData.map(({ r, prov, com, fecha, doc, bulto, verBtn, adminBtns }) => `<div class="prov-card">
       <div class="prov-card-header">
         <div><div class="prov-card-name">${esc(prov?.nombre || '(proveedor eliminado)')}</div>${r.version > 1 ? `<span class="badge badge-rubro" style="margin-top:4px;display:inline-flex">v${r.version}</span>` : ''}</div>
         <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${fecha}</span>
@@ -757,6 +807,7 @@ export function renderRotulosScreen() {
       <div class="prov-card-body">
         <div class="prov-card-row">📄 ${esc(doc)}</div>
         <div class="prov-card-row">📦 ${esc(bulto)}</div>
+        ${com ? `<div class="prov-card-row">🤝 ${esc(com.nombre)}</div>` : ''}
       </div>
       <div class="prov-card-actions">
         ${verBtn}

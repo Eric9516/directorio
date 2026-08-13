@@ -236,6 +236,10 @@
         <select class="filter-select" id="rotFiltroProveedor" onchange="renderRotulosScreen()">
           <option value="">Todos los proveedores</option>
         </select>
+        <select class="filter-select" id="rotFiltroComisionista" onchange="renderRotulosScreen()">
+          <option value="">Todos los comisionistas</option>
+          <option value="sin_comisionista">Sin comisionista</option>
+        </select>
         <select class="filter-select" id="rotFiltroTipoDoc" onchange="renderRotulosScreen()" style="min-width:150px">
           <option value="">Remito y despacho</option>
           <option value="remito">Solo remitos</option>
@@ -249,6 +253,7 @@
           <thead>
             <tr>
               <th>Proveedor</th>
+              <th>Comisionista</th>
               <th>Documento</th>
               <th>Bulto</th>
               <th>Versión</th>
@@ -613,6 +618,17 @@
             </div>
           </div>
         </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;white-space:nowrap">📋 Envío</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        <div class="form-group">
+          <label>Comisionista (opcional — solo para control interno, no se imprime)</label>
+          <select id="rotuloComisionista" onchange="renderRotuloPreview()">
+            <option value="">Sin comisionista</option>
+          </select>
+        </div>
         <div class="form-group">
           <label>Documento (opcional)</label>
           <div style="display:flex;gap:8px">
@@ -624,17 +640,29 @@
             <input type="text" id="rotuloNumDoc" placeholder="N° de documento" style="flex:1" oninput="renderRotuloPreview()">
           </div>
         </div>
-        <div class="form-group">
+        <div class="form-group" style="margin-bottom:0">
           <label>Valor declarado (opcional)</label>
           <input type="text" id="rotuloValorDeclarado" placeholder="Ej: $150.000" oninput="renderRotuloPreview()">
         </div>
-        <div class="form-group">
+
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;white-space:nowrap">📦 Bultos</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
           <label>¿Cuántos bultos tiene este envío?</label>
           <input type="number" id="rotuloBultoTotal" min="1" value="1" oninput="onBultoTotalChange()" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text)">
           <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Se genera un PDF distinto por cada bulto, cada uno con su propia descripción.</div>
         </div>
         <div id="rotuloDetallesWrap" style="display:flex;flex-direction:column;gap:14px"></div>
-        <div class="form-group">
+
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;white-space:nowrap">📝 Notas</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
           <label>Texto adicional (opcional)</label>
           <input type="text" id="rotuloExtra" placeholder="Ej: URGENTE — Contactar antes de recibir" oninput="renderRotuloPreview()">
         </div>
