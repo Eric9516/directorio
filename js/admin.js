@@ -3,7 +3,7 @@ import { state } from './state.js';
 import { toast, closeModal, esc } from './ui.js';
 
 // Solo esta cuenta puede bloquear o eliminar otros usuarios.
-const OWNER_EMAIL = 'repuestos@sobreroycagnolo.com';
+const OWNER_EMAIL = 'repuestos@sobreroycagnolo.com.ar';
 
 // ===== CAMPOS CUSTOM =====
 export function renderCamposCustomAdmin() {
