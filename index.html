@@ -367,6 +367,25 @@
           </div>
         </div>
 
+        <!-- Historial de cambios (solo owner) -->
+        <div class="admin-card" id="auditHistoryCard" style="display:none;grid-column: 1 / -1">
+          <div class="admin-card-header">📜 Historial de cambios — Proveedores, Comisionistas y Contactos</div>
+          <div class="admin-card-body">
+            <table class="users-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Usuario</th>
+                  <th>Sección</th>
+                  <th>Acción</th>
+                  <th>Registro</th>
+                </tr>
+              </thead>
+              <tbody id="auditLogTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
   </main>

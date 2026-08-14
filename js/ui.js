@@ -3,7 +3,7 @@
 export function toast(msg, type = 'success') {
   const el = document.getElementById('toast');
   const icons = { success: '✓', error: '✕' };
-  el.innerHTML = `<span style="color:${type === 'success' ? 'var(--success)' : 'var(--danger)'};font-size:16px">${icons[type] || 'ℹ'}</span> ${msg}`;
+  el.innerHTML = `<span style="color:${type === 'success' ? 'var(--success)' : 'var(--danger)'};font-size:16px">${icons[type] || 'ℹ'}</span> ${esc(msg)}`;
   el.className = `toast ${type} show`;
   setTimeout(() => el.classList.remove('show'), 3200);
 }

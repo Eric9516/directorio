@@ -10,7 +10,7 @@ import { loadComisionistas, renderComisionistas,
          openComModal, saveComisionista, deleteCom,
          openDetailCom, exportExcelCom }                             from './comisionistas.js';
 import { loadUsers, openUserModal, saveUser, toggleUserActivo, deleteUserAccount,
-         addCampoCustomRow, removeCampoCustomRow, saveCamposCustom } from './admin.js';
+         addCampoCustomRow, removeCampoCustomRow, saveCamposCustom, loadAuditLog } from './admin.js';
 import { openRotulo, selectSize, selectDesignSize, updateAdminPreview,
          saveRotuloDesignFromAdmin, resetRotuloDesign, onCustomSizeInput,
          renderRotuloPreview, guardarRotulo, descargarRotuloGuardado,
@@ -136,7 +136,7 @@ function showTab(tab) {
   document.getElementById('paneTareas').style.display        = tab === 'tareas'        ? 'block' : 'none';
   document.getElementById('paneAdmin').style.display         = tab === 'admin'         ? 'block' : 'none';
   document.body.classList.toggle('tareas-mode', tab === 'tareas');
-  if (tab === 'admin')         loadUsers();
+  if (tab === 'admin')         { loadUsers(); loadAuditLog(); }
   if (tab === 'comisionistas') loadComisionistas();
   if (tab === 'rotulos')       loadRotulosScreen();
   if (tab === 'tareas')        openTareasTab();

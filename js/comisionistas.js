@@ -27,7 +27,7 @@ export function renderComisionistas() {
   const zonas = [...new Set(state.comisionistas.map(c => c.zona).filter(Boolean))].sort();
   const sel = document.getElementById('filterZona');
   const cur = sel.value;
-  sel.innerHTML = '<option value="">Todas las zonas</option>' + zonas.map(z => `<option value="${z}" ${z === cur ? 'selected' : ''}>${z}</option>`).join('');
+  sel.innerHTML = '<option value="">Todas las zonas</option>' + zonas.map(z => `<option value="${esc(z)}" ${z === cur ? 'selected' : ''}>${esc(z)}</option>`).join('');
 
   const filtered = state.comisionistas.filter(c => {
     const matchQ = !q      || [c.nombre, c.zona, c.localidad, c.provincia, c.empresa, c.email].some(v => v && v.toLowerCase().includes(q));

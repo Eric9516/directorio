@@ -30,7 +30,7 @@ export function renderProveedores() {
   const rubros = [...new Set(state.proveedores.map(p => p.rubro).filter(Boolean))].sort();
   const sel = document.getElementById('filterRubro');
   const cur = sel.value;
-  sel.innerHTML = '<option value="">Todos los rubros</option>' + rubros.map(r => `<option value="${r}" ${r === cur ? 'selected' : ''}>${r}</option>`).join('');
+  sel.innerHTML = '<option value="">Todos los rubros</option>' + rubros.map(r => `<option value="${esc(r)}" ${r === cur ? 'selected' : ''}>${esc(r)}</option>`).join('');
 
   const filtered = state.proveedores.filter(p => {
     const matchQ = !q    || [p.nombre, p.rubro, p.localidad, p.provincia, p.email].some(v => v && v.toLowerCase().includes(q));

@@ -2,8 +2,8 @@ import { sbFetch, SUPABASE_URL, SUPABASE_KEY } from './api.js';
 import { state } from './state.js';
 import { toast, closeModal, esc } from './ui.js';
 
-// Solo esta cuenta puede bloquear o eliminar otros usuarios.
-const OWNER_EMAIL = 'repuestos@sobreroycagnolo.com.ar';
+// Solo esta cuenta puede bloquear o eliminar otros usuarios, y ver el historial de cambios.
+export const OWNER_EMAIL = 'repuestos@sobreroycagnolo.com.ar';
 
 // ===== CAMPOS CUSTOM =====
 export function renderCamposCustomAdmin() {
@@ -167,6 +167,39 @@ export async function deleteUserAccount(id) {
   } catch (e) {
     toast('Error: ' + e.message, 'error');
   }
+}
+
+// ===== HISTORIAL DE CAMBIOS (solo owner) =====
+const TABLA_LABELS = { proveedores: 'Proveedor', comisionistas: 'Comisionista', contactos: 'Contacto' };
+const ACCION_LABELS = { insert: 'Alta', update: 'Edición', delete: 'Baja' };
+const ACCION_BADGE = { insert: 'badge-active', update: 'badge-rubro', delete: 'badge-inactive' };
+
+export async function loadAuditLog() {
+  const card = document.getElementById('auditHistoryCard');
+  if (!card) return;
+
+  if (state.currentUser?.email !== OWNER_EMAIL) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+
+  try {
+    const rows = await sbFetch('/audit_log?select=*&order=created_at.desc&limit=200');
+    const tbody = document.getElementById('auditLogTableBody');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Sin movimientos registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td>${esc(new Date(r.created_at).toLocaleString('es-AR'))}</td>
+        <td>${esc(r.usuario_nombre || r.usuario_email || 'Desconocido')}</td>
+        <td>${esc(TABLA_LABELS[r.tabla] || r.tabla)}</td>
+        <td><span class="badge ${ACCION_BADGE[r.accion] || ''}">${esc(ACCION_LABELS[r.accion] || r.accion)}</span></td>
+        <td>${esc(r.descripcion || '—')}</td>
+      </tr>`).join('');
+  } catch { toast('Error al cargar historial', 'error'); }
 }
 
 export function initAdminRotuloPanel() {}
