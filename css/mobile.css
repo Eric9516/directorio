@@ -141,7 +141,6 @@
   .section-actions .btn { flex: 1; justify-content: center; }
 
   /* Admin */
-  .admin-grid { grid-template-columns: 1fr !important; }
   .admin-card-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .admin-design-grid { grid-template-columns: 1fr !important; }
   .admin-design-grid > div:first-child { max-height: none !important; overflow-y: visible !important; padding-right: 0 !important; }

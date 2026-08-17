@@ -85,26 +85,25 @@ export function getRotuloToggleValues() {
   return result;
 }
 
-// ===== MODAL DISEÑO ADMIN =====
-export function openModalRotuloDesign() {
+// ===== PESTAÑA DISEÑO ADMIN =====
+export function initRotuloDesignTab() {
   loadDesignIntoControls(getCurrentDesign());
   const pieEl = document.getElementById('cfg_pie');
   if (pieEl) pieEl.value = state.configData.rotulo_pie || '';
   renderRotuloToggles();
   state.selectedDesignSize = 'a4';
-  document.querySelectorAll('#modalRotuloDesign .size-btn').forEach(b => b.classList.remove('active'));
-  const firstBtn = document.querySelector('#modalRotuloDesign .size-btn');
+  document.querySelectorAll('#adminPane-rotulo .size-btn').forEach(b => b.classList.remove('active'));
+  const firstBtn = document.querySelector('#adminPane-rotulo .size-btn');
   if (firstBtn) firstBtn.classList.add('active');
   const dw = document.getElementById('design_w');
   const dh = document.getElementById('design_h');
   if (dw) dw.value = '21';
   if (dh) dh.value = '29.7';
   updateAdminPreview();
-  document.getElementById('modalRotuloDesign').classList.add('open');
 }
 
 export function selectDesignSize(btn, name) {
-  document.querySelectorAll('#modalRotuloDesign .size-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#adminPane-rotulo .size-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   state.selectedDesignSize = name;
   const wEl = document.getElementById('design_w');
@@ -180,8 +179,8 @@ function getDesignWH() {
 }
 
 export function onCustomSizeInput(ctx) {
-  const modal = ctx === 'design' ? '#modalRotuloDesign' : '#modalRotulo';
-  document.querySelectorAll(modal + ' .size-btn').forEach(b => b.classList.remove('active'));
+  const scope = ctx === 'design' ? '#adminPane-rotulo' : '#modalRotulo';
+  document.querySelectorAll(scope + ' .size-btn').forEach(b => b.classList.remove('active'));
   if (ctx === 'design') updateAdminPreview();
   else renderRotuloPreview();
 }

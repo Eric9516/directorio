@@ -77,7 +77,7 @@ export async function loadUsers() {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Sin usuarios registrados</td></tr>';
       return;
     }
-    const isOwner = state.currentUser?.email === OWNER_EMAIL;
+    const owner = isOwner();
     tbody.innerHTML = users.map(u => `
       <tr>
         <td><strong>${esc(u.nombre || '')} ${esc(u.apellido || '')}</strong></td>
@@ -85,11 +85,11 @@ export async function loadUsers() {
         <td><span class="badge ${u.rol === 'admin' ? 'badge-rubro' : 'badge-active'}">${u.rol === 'admin' ? 'Admin' : 'Usuario'}</span></td>
         <td><span class="badge ${u.activo !== false ? 'badge-active' : 'badge-inactive'}">${u.activo !== false ? 'Activo' : 'Inactivo'}</span></td>
         <td><div class="td-actions">
-          ${isOwner ? `<button class="btn btn-ghost btn-sm" onclick="openUserModal('${u.id}')">Editar</button>` : ''}
-          ${isOwner && u.id !== state.currentUser?.id ? `
+          ${owner ? `<button class="btn btn-ghost btn-sm" onclick="openUserModal('${u.id}')">Editar</button>` : ''}
+          ${owner && u.id !== state.currentUser?.id ? `
           <button class="btn btn-danger-ghost btn-sm" onclick="toggleUserActivo('${u.id}',${u.activo !== false})">${u.activo !== false ? 'Bloquear' : 'Desbloquear'}</button>
           <button class="btn btn-danger-ghost btn-sm" onclick="deleteUserAccount('${u.id}')">Eliminar</button>` : ''}
-          ${!isOwner && u.id === state.currentUser?.id ? '<span style="font-size:12px;color:var(--text-muted)">Editá tu nombre desde "Mi perfil"</span>' : ''}
+          ${!owner && u.id === state.currentUser?.id ? '<span style="font-size:12px;color:var(--text-muted)">Editá tu nombre desde "Mi perfil"</span>' : ''}
         </div></td>
       </tr>`).join('');
   } catch { toast('Error al cargar usuarios', 'error'); }
@@ -142,7 +142,7 @@ export async function saveUser() {
 
 export async function toggleUserActivo(id, isActive) {
   if (id === state.currentUser?.id) { toast('No podés bloquear tu propia cuenta', 'error'); return; }
-  if (state.currentUser?.email !== OWNER_EMAIL) { toast('Solo el propietario puede bloquear usuarios', 'error'); return; }
+  if (!isOwner()) { toast('Solo el propietario puede bloquear usuarios', 'error'); return; }
   try {
     await sbFetch(`/usuarios_perfil?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ activo: !isActive }) });
     toast(isActive ? 'Usuario bloqueado' : 'Usuario desbloqueado', 'success');
@@ -152,7 +152,7 @@ export async function toggleUserActivo(id, isActive) {
 
 export async function deleteUserAccount(id) {
   if (id === state.currentUser?.id) { toast('No podés eliminar tu propia cuenta', 'error'); return; }
-  if (state.currentUser?.email !== OWNER_EMAIL) { toast('Solo el propietario puede eliminar usuarios', 'error'); return; }
+  if (!isOwner()) { toast('Solo el propietario puede eliminar usuarios', 'error'); return; }
   if (!confirm('¿Eliminar este usuario definitivamente? Esta acción no se puede deshacer.')) return;
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-user`, {
@@ -174,16 +174,12 @@ const TABLA_LABELS = { proveedores: 'Proveedor', comisionistas: 'Comisionista', 
 const ACCION_LABELS = { insert: 'Alta', update: 'Edición', delete: 'Baja' };
 const ACCION_BADGE = { insert: 'badge-active', update: 'badge-rubro', delete: 'badge-inactive' };
 
+export function isOwner() {
+  return state.currentUser?.email === OWNER_EMAIL;
+}
+
 export async function loadAuditLog() {
-  const card = document.getElementById('auditHistoryCard');
-  if (!card) return;
-
-  if (state.currentUser?.email !== OWNER_EMAIL) {
-    card.style.display = 'none';
-    return;
-  }
-  card.style.display = 'block';
-
+  if (!isOwner()) return;
   try {
     const rows = await sbFetch('/audit_log?select=*&order=created_at.desc&limit=200');
     const tbody = document.getElementById('auditLogTableBody');
@@ -201,5 +197,3 @@ export async function loadAuditLog() {
       </tr>`).join('');
   } catch { toast('Error al cargar historial', 'error'); }
 }
-
-export function initAdminRotuloPanel() {}

@@ -1,11 +1,32 @@
 /* Panel admin, usuarios, campos custom, logo, toggle */
 
-/* ===== ADMIN GRID ===== */
-.admin-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+/* ===== SUB-PESTAÑAS DE ADMIN ===== */
+.admin-subnav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1.5px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.admin-subnav::-webkit-scrollbar { display: none; }
+
+.admin-subtab {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+  background: none;
+  font-family: var(--font);
+  transition: all 0.2s;
+}
+.admin-subtab:hover { color: var(--blue); }
+.admin-subtab.active { color: var(--blue); border-bottom-color: var(--red); }
 
 .admin-card {
   background: var(--white);

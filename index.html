@@ -288,10 +288,18 @@
       <div class="section-header">
         <div class="section-title">⚙️ Administración</div>
       </div>
-      <div class="admin-grid">
 
-        <!-- Empresa -->
-        <div class="admin-card">
+      <div class="admin-subnav">
+        <button class="admin-subtab active" id="adminSubtab-empresa" onclick="showAdminTab('empresa')">🏢 Empresa</button>
+        <button class="admin-subtab" id="adminSubtab-rotulo" onclick="showAdminTab('rotulo')">🏷️ Rótulo</button>
+        <button class="admin-subtab" id="adminSubtab-comisionistas" onclick="showAdminTab('comisionistas')">🤝 Comisionistas</button>
+        <button class="admin-subtab" id="adminSubtab-usuarios" onclick="showAdminTab('usuarios')">👥 Usuarios</button>
+        <button class="admin-subtab" id="adminSubtab-historial" style="display:none" onclick="showAdminTab('historial')">📜 Historial</button>
+      </div>
+
+      <!-- Empresa -->
+      <div id="adminPane-empresa" class="admin-pane">
+        <div class="admin-card" style="max-width:560px">
           <div class="admin-card-header">🏢 Datos de la Empresa</div>
           <div class="admin-card-body">
             <div class="form-group">
@@ -319,17 +327,105 @@
               <input type="email" id="cfg_email" placeholder="contacto@empresa.com">
             </div>
             <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="saveConfig()">Guardar configuración</button>
-            <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
-              <div style="flex:1;height:1px;background:var(--border)"></div>
-              <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;white-space:nowrap">Rótulo</span>
-              <div style="flex:1;height:1px;background:var(--border)"></div>
-            </div>
-            <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="openModalRotuloDesign()">✏️ Editar diseño del rótulo</button>
           </div>
         </div>
+      </div>
 
-        <!-- Campos extra Comisionistas -->
+      <!-- Rótulo (a pantalla completa) -->
+      <div id="adminPane-rotulo" class="admin-pane" style="display:none">
         <div class="admin-card">
+          <div class="admin-card-header">🏷️ Editor de Diseño del Rótulo</div>
+          <div class="admin-card-body">
+            <div class="admin-design-grid">
+              <div style="display:flex;flex-direction:column;gap:10px;max-height:75vh;overflow-y:auto;padding-right:4px">
+
+                <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">📐 Tamaño de vista previa</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
+                    <button class="size-btn active" data-w="21" data-h="29.7" onclick="selectDesignSize(this,'a4')">A4</button>
+                    <button class="size-btn" data-w="21.6" data-h="27.9" onclick="selectDesignSize(this,'carta')">Carta</button>
+                    <button class="size-btn" data-w="21" data-h="14.8" onclick="selectDesignSize(this,'media')">Media A4</button>
+                    <button class="size-btn" data-w="15" data-h="10" onclick="selectDesignSize(this,'15x10')">15×10</button>
+                    <button class="size-btn" data-w="10" data-h="7" onclick="selectDesignSize(this,'etiqueta')">10×7</button>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div style="flex:1"><label style="font-size:11px;margin-bottom:3px;display:block">Ancho (cm)</label><input type="number" id="design_w" value="21" min="5" max="60" step="0.5" oninput="onCustomSizeInput('design')" style="width:100%;padding:7px 10px;border-radius:6px;border:1.5px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text)"></div>
+                    <div style="padding-top:18px;color:var(--text-muted);font-weight:700">×</div>
+                    <div style="flex:1"><label style="font-size:11px;margin-bottom:3px;display:block">Alto (cm)</label><input type="number" id="design_h" value="29.7" min="5" max="60" step="0.5" oninput="onCustomSizeInput('design')" style="width:100%;padding:7px 10px;border-radius:6px;border:1.5px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text)"></div>
+                  </div>
+                </div>
+
+                <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🎨 Colores</div>
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Fondo header</label><input type="color" id="rc_headerBg" value="#1a3a6b" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Barra decorativa</label><input type="color" id="rc_barColor" value="#c8222a" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Color del título</label><input type="color" id="rc_titleColor" value="#1a3a6b" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Color del texto</label><input type="color" id="rc_textColor" value="#333333" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Fondo del cuerpo</label><input type="color" id="rc_bodyBg" value="#ffffff" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Texto nombre empresa</label><input type="color" id="rc_empresaColor" value="#ffffff" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Marco del rótulo</label><input type="color" id="rc_marcoColor" value="#1a3a6b" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
+                  </div>
+                </div>
+
+                <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🖼️ Logo</div>
+                  <div class="form-group" style="margin-bottom:8px"><label>Tamaño</label><div style="display:flex;align-items:center;gap:8px"><input type="range" id="rc_logoSize" min="20" max="80" value="40" oninput="document.getElementById('rc_logoSizeVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1"><span id="rc_logoSizeVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">40px</span></div></div>
+                  <div class="form-group" style="margin-bottom:0"><label>Posición</label><select id="rc_logoPos" onchange="updateAdminPreview()"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></div>
+                </div>
+
+                <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🏢 Nombre empresa</div>
+                  <div class="form-group" style="margin-bottom:8px"><label>Fuente</label><select id="rc_empresaFont" onchange="updateAdminPreview()"><option value="Arial,sans-serif">Arial</option><option value="Georgia,serif">Georgia</option><option value="Verdana,sans-serif">Verdana</option><option value="Tahoma,sans-serif">Tahoma</option><option value="Impact,sans-serif">Impact</option></select></div>
+                  <div class="form-group" style="margin-bottom:8px"><label>Tamaño</label><div style="display:flex;align-items:center;gap:8px"><input type="range" id="rc_empresaSize" min="8" max="32" value="14" oninput="document.getElementById('rc_empresaSizeVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1"><span id="rc_empresaSizeVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">14px</span></div></div>
+                  <div class="form-group" style="margin-bottom:0"><label>Posición</label><select id="rc_empresaPos" onchange="updateAdminPreview()"><option value="left">Junto al logo</option><option value="center">Centro</option><option value="right">Derecha</option><option value="hidden">Ocultar</option></select></div>
+                </div>
+
+                <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🏭 Nombre proveedor</div>
+                  <div class="form-group" style="margin-bottom:8px"><label>Fuente</label><select id="rc_provFont" onchange="updateAdminPreview()"><option value="Arial,sans-serif">Arial</option><option value="Georgia,serif">Georgia</option><option value="Verdana,sans-serif">Verdana</option><option value="Tahoma,sans-serif">Tahoma</option><option value="Impact,sans-serif">Impact</option></select></div>
+                  <div class="form-group" style="margin-bottom:8px"><label>Tamaño</label><div style="display:flex;align-items:center;gap:8px"><input type="range" id="rc_provSize" min="10" max="36" value="18" oninput="document.getElementById('rc_provSizeVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1"><span id="rc_provSizeVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">18px</span></div></div>
+                  <div class="form-group" style="margin-bottom:0"><label>Alineación</label><select id="rc_provAlign" onchange="updateAdminPreview()"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></div>
+                </div>
+
+                <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🔲 Bordes y líneas</div>
+                  <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:6px">Marco del rótulo</div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><input type="range" id="rc_marcoWidth" min="0" max="8" value="1" oninput="document.getElementById('rc_marcoWidthVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1"><span id="rc_marcoWidthVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">1px</span></div>
+                  <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:6px">Barra divisoria</div>
+                  <div style="display:flex;align-items:center;gap:8px"><input type="range" id="rc_barHeight" min="0" max="12" value="4" oninput="document.getElementById('rc_barHeightVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1"><span id="rc_barHeightVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">4px</span></div>
+                </div>
+
+                <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">📋 Campos visibles</div>
+                  <div id="rotuloToggleList"></div>
+                  <div class="divider"></div>
+                  <div class="form-group" style="margin-bottom:0"><label>Pie de página</label><input type="text" id="cfg_pie" placeholder="Ej: San Marcos Sud, Córdoba"></div>
+                </div>
+
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:8px">Vista previa</div>
+                <div id="adminPreviewWrap" style="background:#d0d0d0;border-radius:10px;padding:16px;transition:all 0.3s">
+                  <div id="adminRotuloPreview"></div>
+                </div>
+                <div id="adminPreviewLabel" style="margin-top:8px;font-size:11px;font-weight:700;color:var(--text-muted);text-align:center;letter-spacing:0.5px"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1.5px solid var(--border)">
+              <button class="btn btn-ghost" onclick="resetRotuloDesign()">↺ Restablecer</button>
+              <button class="btn btn-success" onclick="saveRotuloDesignFromAdmin()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                Guardar diseño
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campos extra Comisionistas -->
+      <div id="adminPane-comisionistas" class="admin-pane" style="display:none">
+        <div class="admin-card" style="max-width:560px">
           <div class="admin-card-header" style="justify-content:space-between">
             <span>🤝 Campos extra — Comisionistas</span>
             <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:white;font-size:12px" onclick="addCampoCustomRow()">+ Agregar</button>
@@ -344,9 +440,11 @@
             </button>
           </div>
         </div>
+      </div>
 
-        <!-- Usuarios -->
-        <div class="admin-card" style="grid-column: 1 / -1">
+      <!-- Usuarios -->
+      <div id="adminPane-usuarios" class="admin-pane" style="display:none">
+        <div class="admin-card">
           <div class="admin-card-header" style="justify-content:space-between">
             <span>👥 Usuarios</span>
             <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:white;font-size:12px" onclick="openUserModal()">+ Nuevo usuario</button>
@@ -366,9 +464,11 @@
             </table>
           </div>
         </div>
+      </div>
 
-        <!-- Historial de cambios (solo owner) -->
-        <div class="admin-card" id="auditHistoryCard" style="display:none;grid-column: 1 / -1">
+      <!-- Historial de cambios (solo owner) -->
+      <div id="adminPane-historial" class="admin-pane" style="display:none">
+        <div class="admin-card">
           <div class="admin-card-header">📜 Historial de cambios — Proveedores, Comisionistas y Contactos</div>
           <div class="admin-card-body">
             <table class="users-table">
@@ -385,8 +485,8 @@
             </table>
           </div>
         </div>
-
       </div>
+
     </div>
   </main>
 
@@ -717,100 +817,6 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modalRotuloFotos')">Cerrar</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== MODAL: DISEÑO RÓTULO (ADMIN) ===== -->
-<div class="modal-overlay" id="modalRotuloDesign">
-  <div class="modal" style="max-width:980px;width:100%">
-    <div class="modal-header">
-      <div class="modal-title"><span class="accent">🏷️</span> Editor de Diseño del Rótulo</div>
-      <button class="btn-close" onclick="closeModal('modalRotuloDesign')">✕</button>
-    </div>
-    <div class="admin-design-grid">
-      <div style="display:flex;flex-direction:column;gap:10px;max-height:68vh;overflow-y:auto;padding-right:4px">
-
-        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">📐 Tamaño de vista previa</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
-            <button class="size-btn active" data-w="21" data-h="29.7" onclick="selectDesignSize(this,'a4')">A4</button>
-            <button class="size-btn" data-w="21.6" data-h="27.9" onclick="selectDesignSize(this,'carta')">Carta</button>
-            <button class="size-btn" data-w="21" data-h="14.8" onclick="selectDesignSize(this,'media')">Media A4</button>
-            <button class="size-btn" data-w="15" data-h="10" onclick="selectDesignSize(this,'15x10')">15×10</button>
-            <button class="size-btn" data-w="10" data-h="7" onclick="selectDesignSize(this,'etiqueta')">10×7</button>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="flex:1"><label style="font-size:11px;margin-bottom:3px;display:block">Ancho (cm)</label><input type="number" id="design_w" value="21" min="5" max="60" step="0.5" oninput="onCustomSizeInput('design')" style="width:100%;padding:7px 10px;border-radius:6px;border:1.5px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text)"></div>
-            <div style="padding-top:18px;color:var(--text-muted);font-weight:700">×</div>
-            <div style="flex:1"><label style="font-size:11px;margin-bottom:3px;display:block">Alto (cm)</label><input type="number" id="design_h" value="29.7" min="5" max="60" step="0.5" oninput="onCustomSizeInput('design')" style="width:100%;padding:7px 10px;border-radius:6px;border:1.5px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text)"></div>
-          </div>
-        </div>
-
-        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🎨 Colores</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Fondo header</label><input type="color" id="rc_headerBg" value="#1a3a6b" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Barra decorativa</label><input type="color" id="rc_barColor" value="#c8222a" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Color del título</label><input type="color" id="rc_titleColor" value="#1a3a6b" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Color del texto</label><input type="color" id="rc_textColor" value="#333333" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Fondo del cuerpo</label><input type="color" id="rc_bodyBg" value="#ffffff" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Texto nombre empresa</label><input type="color" id="rc_empresaColor" value="#ffffff" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between"><label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin:0">Marco del rótulo</label><input type="color" id="rc_marcoColor" value="#1a3a6b" oninput="updateAdminPreview()" style="width:34px;height:24px;border:none;border-radius:5px;cursor:pointer;padding:2px"></div>
-          </div>
-        </div>
-
-        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🖼️ Logo</div>
-          <div class="form-group" style="margin-bottom:8px"><label>Tamaño</label><div style="display:flex;align-items:center;gap:8px"><input type="range" id="rc_logoSize" min="20" max="80" value="40" oninput="document.getElementById('rc_logoSizeVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1"><span id="rc_logoSizeVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">40px</span></div></div>
-          <div class="form-group" style="margin-bottom:0"><label>Posición</label><select id="rc_logoPos" onchange="updateAdminPreview()"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></div>
-        </div>
-
-        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🏢 Nombre empresa</div>
-          <div class="form-group" style="margin-bottom:8px"><label>Fuente</label><select id="rc_empresaFont" onchange="updateAdminPreview()"><option value="Arial,sans-serif">Arial</option><option value="Georgia,serif">Georgia</option><option value="Verdana,sans-serif">Verdana</option><option value="Tahoma,sans-serif">Tahoma</option><option value="Impact,sans-serif">Impact</option></select></div>
-          <div class="form-group" style="margin-bottom:8px"><label>Tamaño</label><div style="display:flex;align-items:center;gap:8px"><input type="range" id="rc_empresaSize" min="8" max="32" value="14" oninput="document.getElementById('rc_empresaSizeVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1"><span id="rc_empresaSizeVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">14px</span></div></div>
-          <div class="form-group" style="margin-bottom:0"><label>Posición</label><select id="rc_empresaPos" onchange="updateAdminPreview()"><option value="left">Junto al logo</option><option value="center">Centro</option><option value="right">Derecha</option><option value="hidden">Ocultar</option></select></div>
-        </div>
-
-        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🏭 Nombre proveedor</div>
-          <div class="form-group" style="margin-bottom:8px"><label>Fuente</label><select id="rc_provFont" onchange="updateAdminPreview()"><option value="Arial,sans-serif">Arial</option><option value="Georgia,serif">Georgia</option><option value="Verdana,sans-serif">Verdana</option><option value="Tahoma,sans-serif">Tahoma</option><option value="Impact,sans-serif">Impact</option></select></div>
-          <div class="form-group" style="margin-bottom:8px"><label>Tamaño</label><div style="display:flex;align-items:center;gap:8px"><input type="range" id="rc_provSize" min="10" max="36" value="18" oninput="document.getElementById('rc_provSizeVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1"><span id="rc_provSizeVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">18px</span></div></div>
-          <div class="form-group" style="margin-bottom:0"><label>Alineación</label><select id="rc_provAlign" onchange="updateAdminPreview()"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></div>
-        </div>
-
-        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">🔲 Bordes y líneas</div>
-          <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:6px">Marco del rótulo</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><input type="range" id="rc_marcoWidth" min="0" max="8" value="1" oninput="document.getElementById('rc_marcoWidthVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1"><span id="rc_marcoWidthVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">1px</span></div>
-          <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:6px">Barra divisoria</div>
-          <div style="display:flex;align-items:center;gap:8px"><input type="range" id="rc_barHeight" min="0" max="12" value="4" oninput="document.getElementById('rc_barHeightVal').textContent=this.value+'px';updateAdminPreview()" style="flex:1"><span id="rc_barHeightVal" style="font-size:12px;font-weight:700;color:var(--blue);min-width:34px">4px</span></div>
-        </div>
-
-        <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--blue);margin-bottom:10px">📋 Campos visibles</div>
-          <div id="rotuloToggleList"></div>
-          <div class="divider"></div>
-          <div class="form-group" style="margin-bottom:0"><label>Pie de página</label><input type="text" id="cfg_pie" placeholder="Ej: San Marcos Sud, Córdoba"></div>
-        </div>
-
-      </div>
-      <div>
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:8px">Vista previa</div>
-        <div id="adminPreviewWrap" style="background:#d0d0d0;border-radius:10px;padding:16px;transition:all 0.3s">
-          <div id="adminRotuloPreview"></div>
-        </div>
-        <div id="adminPreviewLabel" style="margin-top:8px;font-size:11px;font-weight:700;color:var(--text-muted);text-align:center;letter-spacing:0.5px"></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="resetRotuloDesign()">↺ Restablecer</button>
-      <button class="btn btn-ghost" onclick="closeModal('modalRotuloDesign')">Cancelar</button>
-      <button class="btn btn-success" onclick="saveRotuloDesignFromAdmin()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-        Guardar diseño
-      </button>
     </div>
   </div>
 </div>

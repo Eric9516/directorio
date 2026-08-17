@@ -521,11 +521,32 @@ tbody tr:hover { background: var(--surface2); }
 .size-btn.active { border-color: var(--blue); background: var(--blue); color: white; }
 
 /* ===== ADMIN PANEL ===== */
-.admin-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+.admin-subnav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1.5px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.admin-subnav::-webkit-scrollbar { display: none; }
+
+.admin-subtab {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+  background: none;
+  font-family: var(--font);
+  transition: all 0.2s;
+}
+.admin-subtab:hover { color: var(--blue); }
+.admin-subtab.active { color: var(--blue); border-bottom-color: var(--red); }
 
 .admin-card {
   background: var(--white);
@@ -737,7 +758,6 @@ input[type="file"] { display: none; }
   .section-header { flex-direction: column; align-items: flex-start; }
   .section-actions { width: 100%; }
   .section-actions .btn { flex: 1; justify-content: center; }
-  .admin-grid { grid-template-columns: 1fr !important; }
   .admin-card-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .admin-design-grid { grid-template-columns: 1fr !important; }
   .admin-design-grid > div:first-child { max-height: none !important; overflow-y: visible !important; padding-right: 0 !important; }

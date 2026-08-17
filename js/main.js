@@ -10,11 +10,11 @@ import { loadComisionistas, renderComisionistas,
          openComModal, saveComisionista, deleteCom,
          openDetailCom, exportExcelCom }                             from './comisionistas.js';
 import { loadUsers, openUserModal, saveUser, toggleUserActivo, deleteUserAccount,
-         addCampoCustomRow, removeCampoCustomRow, saveCamposCustom, loadAuditLog } from './admin.js';
+         addCampoCustomRow, removeCampoCustomRow, saveCamposCustom, loadAuditLog, isOwner } from './admin.js';
 import { openRotulo, selectSize, selectDesignSize, updateAdminPreview,
          saveRotuloDesignFromAdmin, resetRotuloDesign, onCustomSizeInput,
          renderRotuloPreview, guardarRotulo, descargarRotuloGuardado,
-         vistaPreviaRotuloGuardado, openModalRotuloDesign, toggleRotuloCampo,
+         vistaPreviaRotuloGuardado, initRotuloDesignTab, toggleRotuloCampo,
          deleteRotuloGuardado, editRotuloGuardado, verVersionesRotulo,
          loadRotulosScreen, renderRotulosScreen, onBultoTotalChange,
          abrirBultosRotulo,
@@ -136,10 +136,25 @@ function showTab(tab) {
   document.getElementById('paneTareas').style.display        = tab === 'tareas'        ? 'block' : 'none';
   document.getElementById('paneAdmin').style.display         = tab === 'admin'         ? 'block' : 'none';
   document.body.classList.toggle('tareas-mode', tab === 'tareas');
-  if (tab === 'admin')         { loadUsers(); loadAuditLog(); }
+  if (tab === 'admin')         showAdminTab('empresa');
   if (tab === 'comisionistas') loadComisionistas();
   if (tab === 'rotulos')       loadRotulosScreen();
   if (tab === 'tareas')        openTareasTab();
+}
+
+// ===== SUB-TABS DE ADMINISTRACIÓN =====
+function showAdminTab(tab) {
+  document.getElementById('adminSubtab-historial').style.display = isOwner() ? '' : 'none';
+  if (tab === 'historial' && !isOwner()) tab = 'empresa';
+
+  ['empresa', 'rotulo', 'comisionistas', 'usuarios', 'historial'].forEach(t => {
+    document.getElementById('adminSubtab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('adminPane-' + t).style.display = t === tab ? 'block' : 'none';
+  });
+
+  if (tab === 'rotulo')     initRotuloDesignTab();
+  if (tab === 'usuarios')   loadUsers();
+  if (tab === 'historial')  loadAuditLog();
 }
 
 async function openTareasTab() {
@@ -212,7 +227,7 @@ Object.assign(window, {
   // Auth
   doLogin, doLogout,
   // Navegacion
-  showTab, toggleMobileMenu, closeMobileMenu, closeModal, goHome,
+  showTab, showAdminTab, toggleMobileMenu, closeMobileMenu, closeModal, goHome,
   // User dropdown & perfil
   toggleUserDropdown, closeUserDropdown, openProfile, saveProfile,
   // Proveedores
@@ -229,7 +244,7 @@ Object.assign(window, {
   openRotulo, selectSize, selectDesignSize, updateAdminPreview,
   saveRotuloDesignFromAdmin, resetRotuloDesign, onCustomSizeInput,
   renderRotuloPreview, guardarRotulo, descargarRotuloGuardado, vistaPreviaRotuloGuardado,
-  openModalRotuloDesign, toggleRotuloCampo,
+  initRotuloDesignTab, toggleRotuloCampo,
   deleteRotuloGuardado, editRotuloGuardado, verVersionesRotulo,
   loadRotulosScreen, renderRotulosScreen, onBultoTotalChange, abrirBultosRotulo,
   abrirFotosRotulo, handleRotuloFotosUpload, deleteRotuloFoto,
