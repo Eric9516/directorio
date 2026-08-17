@@ -127,7 +127,7 @@ export function updateAdminPreview() {
     wrap.style.aspectRatio = String(ratio);
     wrap.style.display     = 'flex';
     wrap.style.alignItems  = 'stretch';
-    if (ratio < 1) { wrap.style.maxWidth = '320px'; wrap.style.margin = '0 auto'; }
+    if (ratio < 1) { wrap.style.maxWidth = '480px'; wrap.style.margin = '0 auto'; }
     else           { wrap.style.maxWidth = '100%';   wrap.style.margin = '0'; }
     const inner = document.getElementById('adminRotuloPreview');
     if (inner) { inner.style.flex = '1'; inner.style.overflow = 'hidden'; }
