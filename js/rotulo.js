@@ -100,6 +100,7 @@ export function initRotuloDesignTab() {
   if (dw) dw.value = '21';
   if (dh) dh.value = '29.7';
   updateAdminPreview();
+  loadRotuloDisenos();
 }
 
 export function selectDesignSize(btn, name) {
@@ -163,6 +164,90 @@ export async function resetRotuloDesign() {
   } catch {
     toast('Error al restablecer', 'error');
   }
+}
+
+// ===== MODELOS DE DISEÑO GUARDADOS =====
+export async function loadRotuloDisenos() {
+  try {
+    state.rotuloDisenos = await sbFetch('/rotulo_disenos?select=*&order=created_at.desc');
+    renderRotuloDisenos();
+  } catch { toast('Error al cargar modelos guardados', 'error'); }
+}
+
+function renderRotuloDisenos() {
+  const list  = document.getElementById('modelosRotuloList');
+  const noMsg = document.getElementById('noModelosMsg');
+  if (!list) return;
+  const rows = state.rotuloDisenos || [];
+  if (!rows.length) {
+    list.innerHTML = '';
+    if (noMsg) noMsg.style.display = 'block';
+    return;
+  }
+  if (noMsg) noMsg.style.display = 'none';
+  const activoId = state.configData.rotulo_diseno_id;
+  list.innerHTML = rows.map(m => {
+    const activo = m.id === activoId;
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1.5px solid ${activo ? 'var(--blue)' : 'var(--border)'};border-radius:8px;margin-bottom:8px">
+      <div>
+        <div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px">${esc(m.nombre)} ${activo ? '<span class="badge badge-active">Predeterminado</span>' : ''}</div>
+        <div style="font-size:11px;color:var(--text-muted)">Guardado el ${new Date(m.created_at).toLocaleDateString('es-AR')}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        ${!activo ? `<button class="btn btn-ghost btn-sm" onclick="usarModeloRotulo(${m.id})">Usar como predeterminado</button>` : ''}
+        <button class="btn btn-danger-ghost btn-sm" onclick="eliminarModeloRotulo(${m.id})">Eliminar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+export async function guardarComoModelo() {
+  const nombreEl = document.getElementById('nuevoModeloNombre');
+  const nombre = nombreEl?.value.trim();
+  if (!nombre) { toast('Ponele un nombre al modelo', 'error'); return; }
+  try {
+    await sbFetch('/rotulo_disenos', {
+      method: 'POST',
+      body: JSON.stringify({ nombre, design: getRD(), pie: document.getElementById('cfg_pie')?.value.trim() || '', campos: getRotuloToggleValues() })
+    });
+    nombreEl.value = '';
+    toast('Modelo guardado', 'success');
+    await loadRotuloDisenos();
+  } catch { toast('Error al guardar el modelo', 'error'); }
+}
+
+export async function usarModeloRotulo(id) {
+  const modelo = (state.rotuloDisenos || []).find(m => m.id === id);
+  if (!modelo) return;
+  try {
+    await sbFetch('/configuracion?id=eq.1', {
+      method: 'PATCH',
+      body: JSON.stringify({ rotulo_design: modelo.design, rotulo_pie: modelo.pie, rotulo_campos: modelo.campos, rotulo_diseno_id: modelo.id })
+    });
+    state.configData.rotulo_design    = modelo.design;
+    state.configData.rotulo_pie       = modelo.pie;
+    state.configData.rotulo_campos    = modelo.campos;
+    state.configData.rotulo_diseno_id = modelo.id;
+    loadDesignIntoControls(modelo.design);
+    const pieEl = document.getElementById('cfg_pie');
+    if (pieEl) pieEl.value = modelo.pie || '';
+    renderRotuloToggles();
+    updateAdminPreview();
+    renderRotuloDisenos();
+    toast(`"${modelo.nombre}" ahora es el predeterminado`, 'success');
+  } catch { toast('Error al aplicar el modelo', 'error'); }
+}
+
+export async function eliminarModeloRotulo(id) {
+  const modelo = (state.rotuloDisenos || []).find(m => m.id === id);
+  if (!confirm(`¿Eliminar el modelo "${modelo?.nombre}"? Esta acción no se puede deshacer.`)) return;
+  try {
+    await sbFetch(`/rotulo_disenos?id=eq.${id}`, { method: 'DELETE' });
+    if (state.configData.rotulo_diseno_id === id) state.configData.rotulo_diseno_id = null;
+    toast('Modelo eliminado', 'error');
+    await loadRotuloDisenos();
+  } catch { toast('Error al eliminar el modelo', 'error'); }
 }
 
 // ===== TAMAÑOS =====

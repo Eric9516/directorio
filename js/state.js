@@ -21,6 +21,7 @@ export const state = {
   contactRowCounter: 0,
   selectedSize: 'a4',
   selectedDesignSize: 'a4',
+  rotuloDisenos: [],
   // Tareas Semáforo
   tareas: [],
   currentTaskId: null,
