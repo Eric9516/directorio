@@ -2,7 +2,7 @@ import { sbFetch }                from './api.js';
 import { state }                 from './state.js';
 import { toast }                 from './ui.js';
 import { renderCamposCustomAdmin } from './admin.js';
-import { renderRotuloToggles, getRotuloToggleValues } from './rotulo.js';
+import { renderRotuloToggles, getRotuloToggleValues } from './rotuloDesign.js';
 
 export async function loadConfig() {
   try {

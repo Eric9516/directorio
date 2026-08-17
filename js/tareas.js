@@ -1,16 +1,12 @@
 import { sbFetch } from './api.js';
 import { state } from './state.js';
-import { toast, closeModal } from './ui.js';
+import { toast, closeModal, esc } from './ui.js';
 
 // ============================================
 // TAREAS SEM\u00c1FORO \u2014 M\u00f3dulo principal
 // ============================================
 
 // ===== HELPERS =====
-function esc(str) {
-  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 function formatDate(dateStr) {
   if (!dateStr) return '\u2014';
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });

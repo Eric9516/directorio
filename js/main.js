@@ -11,14 +11,15 @@ import { loadComisionistas, renderComisionistas,
          openDetailCom, exportExcelCom }                             from './comisionistas.js';
 import { loadUsers, openUserModal, saveUser, toggleUserActivo, deleteUserAccount,
          addCampoCustomRow, removeCampoCustomRow, saveCamposCustom, loadAuditLog, isOwner } from './admin.js';
-import { openRotulo, selectSize, selectDesignSize, updateAdminPreview,
-         saveRotuloDesignFromAdmin, resetRotuloDesign, onCustomSizeInput,
-         renderRotuloPreview, guardarRotulo, descargarRotuloGuardado,
-         vistaPreviaRotuloGuardado, initRotuloDesignTab, toggleRotuloCampo,
-         deleteRotuloGuardado, editRotuloGuardado, verVersionesRotulo,
-         loadRotulosScreen, renderRotulosScreen, onBultoTotalChange,
-         abrirBultosRotulo, guardarComoModelo, usarModeloRotulo, eliminarModeloRotulo,
-         abrirFotosRotulo, handleRotuloFotosUpload, deleteRotuloFoto }  from './rotulo.js';
+import { selectDesignSize, updateAdminPreview, saveRotuloDesignFromAdmin,
+         resetRotuloDesign, initRotuloDesignTab, toggleRotuloCampo,
+         guardarComoModelo, usarModeloRotulo, eliminarModeloRotulo }    from './rotuloDesign.js';
+import { openRotulo, selectSize, renderRotuloPreview, guardarRotulo,
+         descargarRotuloGuardado, vistaPreviaRotuloGuardado,
+         editRotuloGuardado, onBultoTotalChange }                      from './rotuloCrear.js';
+import { deleteRotuloGuardado, verVersionesRotulo,
+         loadRotulosScreen, renderRotulosScreen, abrirBultosRotulo }   from './rotuloLista.js';
+import { abrirFotosRotulo, handleRotuloFotosUpload, deleteRotuloFoto } from './rotuloFotos.js';
 import { loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
          openTaskDetail, completeTask, cancelTask,
          openReprogramModal, saveReprogram,
@@ -155,6 +156,15 @@ function showAdminTab(tab) {
   if (tab === 'rotulo')     initRotuloDesignTab();
   if (tab === 'usuarios')   loadUsers();
   if (tab === 'historial')  loadAuditLog();
+}
+
+// Los selectores de tamaño del editor de diseño y del modal de creación comparten
+// este mismo input numérico; según el contexto, actualiza una vista previa u otra.
+function onCustomSizeInput(ctx) {
+  const scope = ctx === 'design' ? '#adminPane-rotulo' : '#modalRotulo';
+  document.querySelectorAll(scope + ' .size-btn').forEach(b => b.classList.remove('active'));
+  if (ctx === 'design') updateAdminPreview();
+  else renderRotuloPreview();
 }
 
 async function openTareasTab() {
