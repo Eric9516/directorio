@@ -109,6 +109,8 @@
   .hamburger-btn { display: flex; }
   .app-nav { display: none !important; }
   .user-badge { display: none !important; }
+  #paneMantBuscar .fab-scan { display: flex; }
+  #paneMantBuscar { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 
   /* Layout general */
   .app-header { padding: 0 14px; }

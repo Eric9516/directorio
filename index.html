@@ -573,7 +573,10 @@
         <select class="filter-select" id="mantFiltroSubfamilia" onchange="renderItems()">
           <option value="">Todas las subfamilias</option>
         </select>
-        <button class="btn btn-primary btn-sm" onclick="abrirEscaner()">📷 Escanear QR</button>
+        <button class="btn btn-ghost btn-sm hide-mobile" onclick="abrirEscaner()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
+          Escanear QR
+        </button>
       </div>
 
       <div class="table-wrap">
@@ -583,6 +586,10 @@
         </table>
       </div>
       <div class="prov-cards" id="mantItemsCards"></div>
+
+      <button class="fab-scan" onclick="abrirEscaner()" aria-label="Escanear QR">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
+      </button>
     </div>
 
     <!-- CARRITO TAB -->
@@ -755,6 +762,7 @@
     <div id="itemDetalleBody"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modalItemDetalle')">Cerrar</button>
+      <button class="btn btn-danger-ghost btn-sm" id="itemDetalleDeleteBtn" style="display:none" onclick="">🗑 Eliminar</button>
       <button class="btn btn-primary btn-sm" id="itemDetalleEditBtn" style="display:none" onclick="">✏️ Editar</button>
     </div>
   </div>
@@ -1379,6 +1387,24 @@
     <button class="mobile-nav-item" id="mm-mantenimiento" style="display:none" onclick="showMantenimiento();closeMobileMenu()">
       <span class="mobile-nav-icon">🔧</span><span>Mantenimiento</span>
     </button>
+
+    <!-- Navegación de Mantenimiento (visible solo estando adentro) -->
+    <button class="mobile-nav-item" id="mm-mant-buscar" style="display:none" onclick="showMantTab('buscar');closeMobileMenu()">
+      <span class="mobile-nav-icon">🔍</span><span>Buscar</span>
+    </button>
+    <button class="mobile-nav-item" id="mm-mant-carrito" style="display:none" onclick="showMantTab('carrito');closeMobileMenu()">
+      <span class="mobile-nav-icon">🛒</span><span>A retirar</span> <span id="carritoBadgeMobile" class="badge badge-rubro" style="display:none"></span>
+    </button>
+    <button class="mobile-nav-item" id="mm-mant-retiros" style="display:none" onclick="showMantTab('retiros');closeMobileMenu()">
+      <span class="mobile-nav-icon">📋</span><span>Retiros</span>
+    </button>
+    <button class="mobile-nav-item" id="mm-mant-admin" style="display:none" onclick="showMantTab('admin');closeMobileMenu()">
+      <span class="mobile-nav-icon">⚙️</span><span>Admin Mantenimiento</span>
+    </button>
+    <button class="mobile-nav-item" id="mm-volver-directorio" style="display:none" onclick="exitMantenimiento();closeMobileMenu()">
+      <span class="mobile-nav-icon">←</span><span>Volver a Directorio</span>
+    </button>
+
     <div style="height:1px;background:var(--border);margin:8px 16px"></div>
     <button class="mobile-nav-item" onclick="closeMobileMenu();openProfile()">
       <span class="mobile-nav-icon">👤</span><span>Mi perfil</span>

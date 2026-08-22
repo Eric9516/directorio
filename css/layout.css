@@ -91,6 +91,30 @@
 }
 .btn-volver-directorio:hover { background: rgba(255,255,255,0.26); }
 
+/* Botón flotante de escaneo (mobile) — mismo patrón que .fab-new-task de Tareas. */
+.fab-scan {
+  display: none;
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  right: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--mant);
+  color: white;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(154,91,18,0.4);
+  z-index: 140;
+  transition: all 0.2s;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.fab-scan:hover { transform: scale(1.08); }
+.fab-scan:active { transform: scale(0.95); }
+
 /* ===== HEADER ===== */
 .app-header {
   background: linear-gradient(90deg, var(--blue) 0%, var(--blue-mid) 100%);

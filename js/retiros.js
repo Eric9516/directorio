@@ -71,14 +71,16 @@ export function removeFromRetiroCart(itemId) {
 }
 
 function updateCarritoBadge() {
-  const badge = document.getElementById('carritoBadge');
-  if (!badge) return;
-  if (state.retiroCart.length) {
-    badge.textContent = state.retiroCart.length;
-    badge.style.display = 'inline-flex';
-  } else {
-    badge.style.display = 'none';
-  }
+  ['carritoBadge', 'carritoBadgeMobile'].forEach(id => {
+    const badge = document.getElementById(id);
+    if (!badge) return;
+    if (state.retiroCart.length) {
+      badge.textContent = state.retiroCart.length;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  });
 }
 
 export function renderRetiroCart() {

@@ -16,13 +16,6 @@ export function isMantenimientoComun() {
   return state.currentUser?.mantenimiento_rol === 'comun' && !isMantenimientoAdmin();
 }
 
-// Oculta del menú mobile todo lo que no sea Mantenimiento/Mi perfil/Cerrar sesión,
-// para un usuario que solo tiene acceso a Mantenimiento.
-function hideDirectorioNav() {
-  ['mm-proveedores', 'mm-comisionistas', 'mm-rotulos', 'mm-tareas', 'mm-admin', 'mm-mantenimiento']
-    .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
-}
-
 export function initMantenimientoAccess() {
   state.mantenimientoOnly = isMantenimientoComun();
 
@@ -32,8 +25,7 @@ export function initMantenimientoAccess() {
   }
 
   if (state.mantenimientoOnly) {
-    hideDirectorioNav();
-    showMantenimiento(false);
+    showMantenimiento(false); // ya deja el menú mobile solo con lo de Mantenimiento
     return true; // le indica a initApp que no debe mostrar appScreen
   }
   return false;
@@ -56,6 +48,7 @@ export function showMantenimiento(canExit = true) {
   // El sub-tab de familias/subfamilias es exclusivo del owner, no de cualquier admin de mantenimiento.
   document.getElementById('mantAdminSubtab-familias').style.display = isOwner() ? 'flex' : 'none';
   showMantTab('buscar');
+  setMobileMenuMantenimiento(true, canExit);
 
   loadItems();
 }
@@ -64,6 +57,34 @@ export function exitMantenimiento() {
   if (state.mantenimientoOnly) return; // usuario común: sin salida
   document.getElementById('mantenimientoScreen').classList.remove('visible');
   document.getElementById('appScreen').classList.add('visible');
+  setMobileMenuMantenimiento(false);
+}
+
+// El menú mobile (hamburguesa) es un único elemento compartido entre Directorio y
+// Mantenimiento — hay que mostrarle a cada uno solo su propia navegación, nunca las dos mezcladas.
+function setMobileMenuMantenimiento(dentro, canExit = true) {
+  const admin = isMantenimientoAdmin();
+
+  // Ítems propios de Directorio: ocultos mientras estás adentro de Mantenimiento.
+  ['mm-proveedores', 'mm-comisionistas', 'mm-rotulos', 'mm-tareas'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = dentro ? 'none' : 'flex';
+  });
+  const dirAdminVisible = !dentro && state.isAdmin;
+  document.getElementById('mm-admin').style.display = dirAdminVisible ? 'flex' : 'none';
+  document.getElementById('mmDividerAdmin').style.display = dirAdminVisible ? 'block' : 'none';
+
+  // Ítems propios de Mantenimiento: visibles solo estando adentro.
+  ['mm-mant-buscar', 'mm-mant-carrito', 'mm-mant-retiros'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = dentro ? 'flex' : 'none';
+  });
+  const adminBtn = document.getElementById('mm-mant-admin');
+  if (adminBtn) adminBtn.style.display = (dentro && admin) ? 'flex' : 'none';
+  const volverBtn = document.getElementById('mm-volver-directorio');
+  if (volverBtn) volverBtn.style.display = (dentro && canExit) ? 'flex' : 'none';
+  const irBtn = document.getElementById('mm-mantenimiento');
+  if (irBtn && admin) irBtn.style.display = dentro ? 'none' : 'flex';
 }
 
 // ===== NAV =====

@@ -50,7 +50,6 @@ export function renderItems() {
   const q             = document.getElementById('mantSearch').value.trim().toLowerCase();
   const familiaId     = document.getElementById('mantFiltroFamilia').value;
   const subfamiliaId  = document.getElementById('mantFiltroSubfamilia').value;
-  const admin         = isMantenimientoAdmin();
 
   const filtered = state.items.filter(it => {
     const matchQ = !q || [it.codigo, it.numero, it.descripcion].some(v => v && v.toLowerCase().includes(q));
@@ -78,8 +77,6 @@ export function renderItems() {
       <td onclick="openItemDetalle('${it.id}')" style="cursor:pointer">${esc(it.descripcion)}</td>
       <td><div class="td-actions" style="flex-wrap:nowrap">
         <button class="btn btn-primary btn-sm" title="Retirar" onclick="addToRetiroCart('${it.id}',this)">📤 Retirar</button>
-        ${admin ? `<button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openItemModal('${it.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button class="btn btn-danger-ghost btn-sm btn-icon" title="Eliminar" onclick="deleteItem('${it.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>` : ''}
       </div></td>
     </tr>`).join('');
 
@@ -90,9 +87,7 @@ export function renderItems() {
           <div><div class="prov-card-name">${esc(it.codigo)}</div><div style="font-size:12px;color:var(--text-mid);margin-top:2px">${esc(it.descripcion)}</div></div>
         </div>
         <div class="prov-card-actions">
-          <button class="btn btn-primary btn-sm" onclick="addToRetiroCart('${it.id}',this)">📤 Retirar</button>
-          ${admin ? `<button class="btn btn-ghost btn-sm" onclick="openItemModal('${it.id}')">✏️ Editar</button>
-          <button class="btn btn-danger-ghost btn-sm" onclick="deleteItem('${it.id}')">🗑</button>` : ''}
+          <button class="btn btn-primary btn-sm" style="flex:0 0 auto" onclick="addToRetiroCart('${it.id}',this)">📤 Retirar</button>
         </div>
       </div>`).join('');
   }
@@ -108,11 +103,15 @@ export function openItemDetalle(id) {
   document.getElementById('itemDetalleBody').innerHTML = renderItemDetalleBody(it);
 
   const editBtn = document.getElementById('itemDetalleEditBtn');
+  const deleteBtn = document.getElementById('itemDetalleDeleteBtn');
   if (isMantenimientoAdmin()) {
     editBtn.style.display = 'flex';
     editBtn.onclick = () => { closeModal('modalItemDetalle'); openItemModal(id); };
+    deleteBtn.style.display = 'flex';
+    deleteBtn.onclick = () => deleteItem(id);
   } else {
     editBtn.style.display = 'none';
+    deleteBtn.style.display = 'none';
   }
 
   document.getElementById('modalItemDetalle').classList.add('open');
@@ -359,6 +358,7 @@ export async function deleteItem(id) {
   try {
     await sbFetch(`/items?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
     toast('Repuesto eliminado', 'error');
+    closeModal('modalItemDetalle');
     await loadItems();
   } catch { toast('Error al eliminar', 'error'); }
 }
