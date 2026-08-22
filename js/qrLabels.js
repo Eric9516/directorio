@@ -32,7 +32,7 @@ export function generarQRPDF(items, nombreArchivo, formato = 'qr_codigo') {
     const qr = qrcode(0, 'M');
     qr.addData(it.codigo);
     qr.make();
-    const dataUrl = qr.createDataURL(6, 0);
+    const dataUrl = qr.createDataURL(6, 4); // margen de 4 módulos: sin esto, muchos lectores no lo reconocen
     const formatoImg = dataUrl.match(/^data:image\/(\w+);/)?.[1]?.toUpperCase() || 'PNG';
 
     const qrX = cellX + (cellW - qrSize) / 2;
