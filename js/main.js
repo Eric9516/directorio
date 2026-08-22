@@ -25,13 +25,13 @@ import { loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
          openReprogramModal, saveReprogram,
          toggleVistaDropdown, setTaskView }          from './tareas.js';
 import { initMantenimientoAccess, showMantenimiento, exitMantenimiento,
-         showMantTab, showMantAdminSubtab, isMantenimientoAdmin }      from './mantenimiento.js';
+         showMantTab, isMantenimientoAdmin, tieneAccesoAdmin, setMobileMenuModo } from './mantenimiento.js';
 import { renderItems, onFamiliaFiltroChange, openItemModal, onModalFamiliaChange,
          updateCodigoPreview, promptNuevaFamilia, promptNuevaSubfamilia,
          saveItem, deleteItem, openItemDetalle, subirFotoDetalle, eliminarFotoDetalle,
          descargarQRDeItem }                                           from './items.js';
 import { renderFamiliasPanel, saveFamiliaNombre, saveSubfamiliaNombre } from './familias.js';
-import { addSector, saveSectorNombre, toggleSectorActivo } from './sectores.js';
+import { addSector, saveSectorNombre, toggleSectorActivo, renderSectoresPanel } from './sectores.js';
 import { abrirGenerarQR, renderQRBusqueda, agregarQRSeleccion, confirmarCantidadQR,
          actualizarCantidadQR, quitarQRSeleccion, generarQREtiquetasSeleccion } from './qrLabels.js';
 import { abrirEscaner, cerrarEscaner, terminarEscaneo, removeFromRetiroCartYRefrescarScan } from './scanner.js';
@@ -40,6 +40,9 @@ import { addToRetiroCart, updateRetiroCantidad, updateRetiroObservacion,
          updateHistorialCantidad, deleteHistorialItem, renderHistorialRetiros,
          exportarRetirosPendientes, abrirExportarPeriodo, exportarRetirosPeriodo } from './retiros.js';
 import { sbFetch } from './api.js';
+import { initErrorLogging, loadErrorLogs, limpiarErrorLogs, puedeVerErrores } from './errorLog.js';
+
+initErrorLogging();
 
 // ===== NOMBRE PERSONALIZADO =====
 function updateUserDisplay() {
@@ -53,6 +56,19 @@ function updateUserDisplay() {
   document.getElementById('mobileUsername').textContent = fullName;
   document.getElementById('mobileEmail').textContent   = state.currentUser?.email || '';
   document.getElementById('mobileAvatar').textContent  = initial;
+  document.getElementById('adminUserName').textContent = fullName;
+  document.getElementById('adminUserAvatar').textContent = initial;
+}
+
+// El botón "Administración" es uno solo, pero aparece en Directorio Y en Mantenimiento
+// (en desktop y en el menú mobile) — se computa una sola vez acá porque el permiso no
+// cambia durante la sesión.
+function actualizarBotonAdmin() {
+  const tieneAdmin = tieneAccesoAdmin();
+  document.getElementById('tab-admin').style.display = tieneAdmin ? 'flex' : 'none';
+  document.getElementById('navDividerAdmin').style.display = tieneAdmin ? 'block' : 'none';
+  document.getElementById('manttab-admin').style.display = tieneAdmin ? 'flex' : 'none';
+  document.getElementById('manttabDividerAdmin').style.display = tieneAdmin ? 'block' : 'none';
 }
 
 // ===== APP INIT =====
@@ -61,16 +77,10 @@ async function initApp() {
 
   const mantenimientoOnly = initMantenimientoAccess();
   updateUserDisplay();
+  actualizarBotonAdmin();
   if (mantenimientoOnly) return; // usuario común de mantenimiento: no ve el resto de la app
 
   document.getElementById('appScreen').classList.add('visible');
-
-  if (state.isAdmin) {
-    document.getElementById('tab-admin').style.display      = 'flex';
-    document.getElementById('mm-admin').style.display       = 'flex';
-    document.getElementById('navDividerAdmin').style.display = 'block';
-    document.getElementById('mmDividerAdmin').style.display  = 'block';
-  }
 
   await loadConfig();
   await loadProveedores();
@@ -79,18 +89,62 @@ async function initApp() {
   if (guardada?.screen === 'mantenimiento' && isMantenimientoAdmin()) {
     showMantenimiento(true);
   } else {
-    const dirTabsValidos = ['proveedores', 'comisionistas', 'rotulos', 'tareas', ...(state.isAdmin ? ['admin'] : [])];
+    setMobileMenuModo('directorio');
+    const dirTabsValidos = ['proveedores', 'comisionistas', 'rotulos', 'tareas'];
     showTab(dirTabsValidos.includes(guardada?.dirTab) ? guardada.dirTab : 'proveedores');
   }
 }
 
 function goHome() {
   if (state.mantenimientoOnly) return;
+  if (document.getElementById('adminScreen').classList.contains('visible')) {
+    exitAdmin();
+    return;
+  }
   if (document.getElementById('mantenimientoScreen').classList.contains('visible')) {
     exitMantenimiento();
     return;
   }
   showTab('proveedores');
+}
+
+// ===== ADMINISTRACIÓN (pantalla compartida entre Directorio y Mantenimiento) =====
+// Todo lo que antes vivía separado en "Admin de Directorio" y "Admin de Mantenimiento"
+// ahora es una sola pantalla, agrupada por secciones, para que cada permiso alcance
+// para llegar a lo que corresponde sin depender de tener acceso al otro módulo.
+const ADMIN_TABS = [
+  { id: 'empresa',       group: 'directorio',    check: () => state.isAdmin },
+  { id: 'rotulo',        group: 'directorio',    check: () => state.isAdmin },
+  { id: 'comisionistas', group: 'directorio',    check: () => state.isAdmin },
+  { id: 'repuestos',     group: 'mantenimiento', check: () => isMantenimientoAdmin() },
+  { id: 'sectores',      group: 'mantenimiento', check: () => isMantenimientoAdmin() },
+  { id: 'familias',      group: 'mantenimiento', check: () => isOwner() },
+  { id: 'usuarios',      group: 'general',       check: () => state.isAdmin },
+  { id: 'historial',     group: 'general',       check: () => isOwner() },
+  { id: 'errores',       group: 'general',       check: () => puedeVerErrores() },
+];
+
+let adminPreviousScreen = 'directorio';
+
+function showAdmin() {
+  adminPreviousScreen = document.getElementById('mantenimientoScreen').classList.contains('visible') ? 'mantenimiento' : 'directorio';
+  document.getElementById('appScreen').classList.remove('visible');
+  document.getElementById('mantenimientoScreen').classList.remove('visible');
+  document.getElementById('adminScreen').classList.add('visible');
+  setMobileMenuModo('admin');
+  const primerTabVisible = ADMIN_TABS.find(t => t.check());
+  showAdminTab(primerTabVisible ? primerTabVisible.id : 'empresa');
+}
+
+function exitAdmin() {
+  document.getElementById('adminScreen').classList.remove('visible');
+  if (adminPreviousScreen === 'mantenimiento') {
+    document.getElementById('mantenimientoScreen').classList.add('visible');
+    setMobileMenuModo('mantenimiento', !state.mantenimientoOnly);
+  } else {
+    document.getElementById('appScreen').classList.add('visible');
+    setMobileMenuModo('directorio');
+  }
 }
 
 // ===== USER DROPDOWN =====
@@ -166,27 +220,49 @@ function showTab(tab) {
   document.getElementById('paneComisionistas').style.display = tab === 'comisionistas' ? 'block' : 'none';
   document.getElementById('paneRotulos').style.display       = tab === 'rotulos'       ? 'block' : 'none';
   document.getElementById('paneTareas').style.display        = tab === 'tareas'        ? 'block' : 'none';
-  document.getElementById('paneAdmin').style.display         = tab === 'admin'         ? 'block' : 'none';
   document.body.classList.toggle('tareas-mode', tab === 'tareas');
-  if (tab === 'admin')         showAdminTab('empresa');
   if (tab === 'comisionistas') loadComisionistas();
   if (tab === 'rotulos')       loadRotulosScreen();
   if (tab === 'tareas')        openTareasTab();
 }
 
-// ===== SUB-TABS DE ADMINISTRACIÓN =====
-function showAdminTab(tab) {
-  document.getElementById('adminSubtab-historial').style.display = isOwner() ? '' : 'none';
-  if (tab === 'historial' && !isOwner()) tab = 'empresa';
+// ===== TABS DE ADMINISTRACIÓN (2 niveles: grupo arriba, pestaña abajo) =====
+let adminGrupoActivo = 'directorio';
 
-  ['empresa', 'rotulo', 'comisionistas', 'usuarios', 'historial'].forEach(t => {
-    document.getElementById('adminSubtab-' + t).classList.toggle('active', t === tab);
-    document.getElementById('adminPane-' + t).style.display = t === tab ? 'block' : 'none';
+function showAdminTab(tab) {
+  const visibles = {};
+  ADMIN_TABS.forEach(t => { visibles[t.id] = t.check(); });
+  if (!visibles[tab]) tab = ADMIN_TABS.find(t => visibles[t.id])?.id;
+  if (!tab) return; // no debería pasar: el botón para entrar a Admin ya está oculto sin ningún permiso
+
+  adminGrupoActivo = ADMIN_TABS.find(t => t.id === tab).group;
+
+  ['directorio', 'mantenimiento', 'general'].forEach(g => {
+    const grupoVisible = ADMIN_TABS.some(t => t.group === g && visibles[t.id]);
+    const btn = document.getElementById('adminGroupBtn-' + g);
+    btn.style.display = grupoVisible ? '' : 'none';
+    btn.classList.toggle('active', g === adminGrupoActivo);
   });
 
-  if (tab === 'rotulo')     initRotuloDesignTab();
-  if (tab === 'usuarios')   loadUsers();
-  if (tab === 'historial')  loadAuditLog();
+  ADMIN_TABS.forEach(t => {
+    const btn = document.getElementById('adminSubtab-' + t.id);
+    btn.style.display = (visibles[t.id] && t.group === adminGrupoActivo) ? '' : 'none';
+    btn.classList.toggle('active', t.id === tab);
+    document.getElementById('adminPane-' + t.id).style.display = t.id === tab ? 'block' : 'none';
+  });
+
+  if (tab === 'rotulo')    initRotuloDesignTab();
+  if (tab === 'sectores')  renderSectoresPanel();
+  if (tab === 'familias')  renderFamiliasPanel();
+  if (tab === 'usuarios')  loadUsers();
+  if (tab === 'historial') loadAuditLog();
+  if (tab === 'errores')   loadErrorLogs();
+}
+
+// Cambiar de grupo (nivel 1) selecciona automáticamente su primera pestaña visible.
+function selectAdminGroup(group) {
+  const primera = ADMIN_TABS.find(t => t.group === group && t.check());
+  if (primera) showAdminTab(primera.id);
 }
 
 // Los selectores de tamaño del editor de diseño y del modal de creación comparten
@@ -268,7 +344,7 @@ Object.assign(window, {
   // Auth
   doLogin, doLogout,
   // Navegacion
-  showTab, showAdminTab, toggleMobileMenu, closeMobileMenu, closeModal, goHome,
+  showTab, showAdminTab, showAdmin, exitAdmin, selectAdminGroup, toggleMobileMenu, closeMobileMenu, closeModal, goHome,
   // User dropdown & perfil
   toggleUserDropdown, closeUserDropdown, openProfile, saveProfile,
   // Proveedores
@@ -305,13 +381,15 @@ Object.assign(window, {
   abrirGenerarQR, renderQRBusqueda, agregarQRSeleccion, confirmarCantidadQR,
   actualizarCantidadQR, quitarQRSeleccion, generarQREtiquetasSeleccion,
   abrirEscaner, cerrarEscaner, terminarEscaneo, removeFromRetiroCartYRefrescarScan,
-  showMantTab, showMantAdminSubtab, renderFamiliasPanel,
+  showMantTab, renderFamiliasPanel,
   saveFamiliaNombre, saveSubfamiliaNombre,
   addToRetiroCart, updateRetiroCantidad, updateRetiroObservacion,
   removeFromRetiroCart, confirmRetiro, enviarRetiroFinal, toggleHistorialDia,
   updateHistorialCantidad, deleteHistorialItem, renderHistorialRetiros,
   exportarRetirosPendientes, abrirExportarPeriodo, exportarRetirosPeriodo,
   addSector, saveSectorNombre, toggleSectorActivo,
+  // Log de errores
+  loadErrorLogs, limpiarErrorLogs,
 });
 
 // El módulo principal cargó bien: si una carga anterior había fallado y disparado

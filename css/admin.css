@@ -1,17 +1,18 @@
 /* Panel admin, usuarios, campos custom, logo, toggle */
 
-/* ===== SUB-PESTAÑAS DE ADMIN ===== */
-.admin-subnav {
+/* ===== ADMIN: tabs de dos niveles ===== */
+/* Nivel 1 — grupo (Directorio / Mantenimiento / General), estilo subrayado. */
+.admin-group-tabs {
   display: flex;
   gap: 4px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   border-bottom: 1.5px solid var(--border);
   overflow-x: auto;
   scrollbar-width: none;
 }
-.admin-subnav::-webkit-scrollbar { display: none; }
+.admin-group-tabs::-webkit-scrollbar { display: none; }
 
-.admin-subtab {
+.admin-group-tab {
   padding: 10px 16px;
   font-size: 13px;
   font-weight: 700;
@@ -25,8 +26,35 @@
   font-family: var(--font);
   transition: all 0.2s;
 }
-.admin-subtab:hover { color: var(--blue); }
-.admin-subtab.active { color: var(--blue); border-bottom-color: var(--red); }
+.admin-group-tab:hover { color: var(--blue); }
+.admin-group-tab.active { color: var(--blue); border-bottom-color: var(--red); }
+
+/* Nivel 2 — pestaña dentro del grupo elegido, estilo chip/píldora. */
+.admin-subnav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.admin-subnav::-webkit-scrollbar { display: none; }
+
+.admin-subtab {
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-mid);
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--white);
+  font-family: var(--font);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.admin-subtab:hover { border-color: var(--blue); color: var(--blue); }
+.admin-subtab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
 
 .admin-card {
   background: var(--white);

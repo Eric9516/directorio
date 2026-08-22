@@ -3,13 +3,20 @@
 import { state, guardarUbicacion, leerUbicacionGuardada } from './state.js';
 import { isOwner } from './admin.js';
 import { loadItems } from './items.js';
-import { renderFamiliasPanel } from './familias.js';
 import { loadHistorialRetiros, renderRetiroCart, restaurarCartLocal } from './retiros.js';
-import { renderSectoresPanel } from './sectores.js';
+import { puedeVerErrores } from './errorLog.js';
 
 // Espeja is_mantenimiento_admin() del lado de Supabase (misma condición).
 export function isMantenimientoAdmin() {
   return state.currentUser?.mantenimiento_rol === 'admin' || isOwner();
+}
+
+// Hay una sola pantalla de "Administración" (compartida entre Directorio y
+// Mantenimiento), pero varios permisos distintos pueden dar acceso a ALGUNA de sus
+// pestañas (Directorio admin, Mantenimiento admin, o el permiso puntual de Errores).
+// Esto decide si el botón para entrar siquiera se muestra.
+export function tieneAccesoAdmin() {
+  return state.isAdmin || isMantenimientoAdmin() || puedeVerErrores();
 }
 
 // Espeja can_view_all_retiros() del lado de Supabase. Ver el historial completo de
@@ -52,18 +59,13 @@ export function showMantenimiento(canExit = true, initialTab) {
   document.getElementById('mantUserName').textContent = `${nombre} ${u?.apellido || ''}`.trim();
   document.getElementById('mantUserAvatar').textContent = (nombre[0] || 'U').toUpperCase();
 
-  const admin = isMantenimientoAdmin();
-  document.getElementById('manttab-admin').style.display = admin ? 'flex' : 'none';
-  document.getElementById('manttabDividerAdmin').style.display = admin ? 'block' : 'none';
-  // El sub-tab de familias/subfamilias es exclusivo del owner, no de cualquier admin de mantenimiento.
-  document.getElementById('mantAdminSubtab-familias').style.display = isOwner() ? 'flex' : 'none';
-
-  // Al recargar la página, vuelve a la pestaña de Mantenimiento en la que estaba
-  // (a menos que ya no tenga permiso para verla, ej. "admin" sin serlo).
+  // Al recargar la página, vuelve a la pestaña de Mantenimiento en la que estaba.
+  // "admin" queda como valor legado (antes existía acá) por si alguien tenía esa
+  // pestaña guardada de una sesión vieja — ya no es una pestaña de Mantenimiento.
   if (!initialTab) initialTab = leerUbicacionGuardada()?.mantTab || 'buscar';
-  if (initialTab === 'admin' && !admin) initialTab = 'buscar';
+  if (!['buscar', 'carrito', 'retiros'].includes(initialTab)) initialTab = 'buscar';
   showMantTab(initialTab);
-  setMobileMenuMantenimiento(true, canExit);
+  setMobileMenuModo('mantenimiento', canExit);
 
   loadItems();
 }
@@ -73,34 +75,36 @@ export function exitMantenimiento() {
   guardarUbicacion({ screen: 'directorio' });
   document.getElementById('mantenimientoScreen').classList.remove('visible');
   document.getElementById('appScreen').classList.add('visible');
-  setMobileMenuMantenimiento(false);
+  setMobileMenuModo('directorio');
 }
 
-// El menú mobile (hamburguesa) es un único elemento compartido entre Directorio y
-// Mantenimiento — hay que mostrarle a cada uno solo su propia navegación, nunca las dos mezcladas.
-function setMobileMenuMantenimiento(dentro, canExit = true) {
-  const admin = isMantenimientoAdmin();
+// El menú mobile (hamburguesa) es un único elemento compartido entre Directorio,
+// Mantenimiento y Administración — hay que mostrarle a cada uno solo su propia
+// navegación, nunca mezcladas. "admin" no muestra ninguna de las dos: adentro de
+// Administración se navega con las sub-pestañas de la propia pantalla.
+export function setMobileMenuModo(modo, canExit = true) {
+  const tieneAdmin = tieneAccesoAdmin();
+  const enDirectorio = modo === 'directorio';
+  const enMantenimiento = modo === 'mantenimiento';
 
-  // Ítems propios de Directorio: ocultos mientras estás adentro de Mantenimiento.
   ['mm-proveedores', 'mm-comisionistas', 'mm-rotulos', 'mm-tareas'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = dentro ? 'none' : 'flex';
+    if (el) el.style.display = enDirectorio ? 'flex' : 'none';
   });
-  const dirAdminVisible = !dentro && state.isAdmin;
+  const dirAdminVisible = enDirectorio && tieneAdmin;
   document.getElementById('mm-admin').style.display = dirAdminVisible ? 'flex' : 'none';
   document.getElementById('mmDividerAdmin').style.display = dirAdminVisible ? 'block' : 'none';
 
-  // Ítems propios de Mantenimiento: visibles solo estando adentro.
   ['mm-mant-buscar', 'mm-mant-carrito', 'mm-mant-retiros'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = dentro ? 'flex' : 'none';
+    if (el) el.style.display = enMantenimiento ? 'flex' : 'none';
   });
   const adminBtn = document.getElementById('mm-mant-admin');
-  if (adminBtn) adminBtn.style.display = (dentro && admin) ? 'flex' : 'none';
+  if (adminBtn) adminBtn.style.display = (enMantenimiento && tieneAdmin) ? 'flex' : 'none';
   const volverBtn = document.getElementById('mm-volver-directorio');
-  if (volverBtn) volverBtn.style.display = (dentro && canExit) ? 'flex' : 'none';
+  if (volverBtn) volverBtn.style.display = (enMantenimiento && canExit) ? 'flex' : 'none';
   const irBtn = document.getElementById('mm-mantenimiento');
-  if (irBtn && admin) irBtn.style.display = dentro ? 'none' : 'flex';
+  if (irBtn && isMantenimientoAdmin()) irBtn.style.display = enDirectorio ? 'flex' : 'none';
 }
 
 // ===== NAV =====
@@ -111,20 +115,9 @@ export function showMantTab(tab) {
   document.getElementById('paneMantBuscar').style.display  = tab === 'buscar'  ? 'block' : 'none';
   document.getElementById('paneMantCarrito').style.display = tab === 'carrito' ? 'block' : 'none';
   document.getElementById('paneMantRetiros').style.display = tab === 'retiros' ? 'block' : 'none';
-  document.getElementById('paneMantAdmin').style.display   = tab === 'admin'   ? 'block' : 'none';
-  if (tab === 'admin') showMantAdminSubtab('repuestos');
   if (tab === 'carrito') renderRetiroCart();
   if (tab === 'retiros') {
     document.getElementById('historialRetirosTitle').textContent = puedeVerTodosLosRetiros() ? '📋 Historial de retiros' : '📋 Mis retiros';
     loadHistorialRetiros();
   }
-}
-
-export function showMantAdminSubtab(tab) {
-  ['repuestos', 'sectores', 'familias'].forEach(t => {
-    document.getElementById('mantAdminSubtab-' + t).classList.toggle('active', t === tab);
-    document.getElementById('mantAdminPane-' + t).style.display = t === tab ? 'block' : 'none';
-  });
-  if (tab === 'familias') renderFamiliasPanel();
-  if (tab === 'sectores') renderSectoresPanel();
 }

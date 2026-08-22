@@ -91,7 +91,7 @@ export async function loadUsers() {
         <td><strong>${esc(u.nombre || '')} ${esc(u.apellido || '')}</strong></td>
         <td>${esc(u.email || '')}</td>
         <td><span class="badge ${rolInfo.cls}">${rolInfo.label}</span></td>
-        <td>${u.mantenimiento_rol ? `<span class="badge badge-rubro">${MANT_LABELS[u.mantenimiento_rol]}</span>` : '<span style="color:var(--text-muted);font-size:12px">—</span>'}${u.puede_ver_retiros ? ' <span class="badge badge-active" title="Puede ver el historial completo de retiros">👁 Retiros</span>' : ''}</td>
+        <td>${u.mantenimiento_rol ? `<span class="badge badge-rubro">${MANT_LABELS[u.mantenimiento_rol]}</span>` : '<span style="color:var(--text-muted);font-size:12px">—</span>'}${u.puede_ver_retiros ? ' <span class="badge badge-active" title="Puede ver el historial completo de retiros">👁 Retiros</span>' : ''}${u.puede_ver_errores ? ' <span class="badge badge-active" title="Puede ver el log de errores">🐞</span>' : ''}</td>
         <td><span class="badge ${u.activo !== false ? 'badge-active' : 'badge-inactive'}">${u.activo !== false ? 'Activo' : 'Inactivo'}</span></td>
         <td><div class="td-actions">
           ${owner ? `<button class="btn btn-ghost btn-sm" onclick="openUserModal('${u.id}')">Editar</button>` : ''}
@@ -119,6 +119,7 @@ export async function openUserModal(id = null) {
       document.getElementById('u_rol').value = u?.rol || 'user';
       document.getElementById('u_mantenimiento_rol').value = u?.mantenimiento_rol || '';
       document.getElementById('u_puede_ver_retiros').checked = u?.puede_ver_retiros === true;
+      document.getElementById('u_puede_ver_errores').checked = u?.puede_ver_errores === true;
     } catch {
       toast('Error al cargar el usuario', 'error');
       return;
@@ -128,6 +129,7 @@ export async function openUserModal(id = null) {
     document.getElementById('u_rol').value = 'user';
     document.getElementById('u_mantenimiento_rol').value = '';
     document.getElementById('u_puede_ver_retiros').checked = false;
+    document.getElementById('u_puede_ver_errores').checked = false;
   }
   document.getElementById('modalUser').classList.add('open');
 }
@@ -140,6 +142,7 @@ export async function saveUser() {
   const rol      = document.getElementById('u_rol').value;
   const mantenimiento_rol = document.getElementById('u_mantenimiento_rol').value || null;
   const puede_ver_retiros = document.getElementById('u_puede_ver_retiros').checked;
+  const puede_ver_errores = document.getElementById('u_puede_ver_errores').checked;
 
   if (!nombre || !email) { toast('Nombre y email son obligatorios', 'error'); return; }
 
@@ -149,7 +152,7 @@ export async function saveUser() {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
         method: 'POST',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${localStorage.getItem('sb_token')}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: pass, nombre, apellido, rol, mantenimiento_rol, puede_ver_retiros })
+        body: JSON.stringify({ email, password: pass, nombre, apellido, rol, mantenimiento_rol, puede_ver_retiros, puede_ver_errores })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al crear usuario');
@@ -157,7 +160,7 @@ export async function saveUser() {
     } catch (e) { toast('Error: ' + e.message, 'error'); return; }
   } else {
     try {
-      await sbFetch(`/usuarios_perfil?id=eq.${state.editingUserId}`, { method: 'PATCH', body: JSON.stringify({ nombre, apellido, rol, mantenimiento_rol, puede_ver_retiros }) });
+      await sbFetch(`/usuarios_perfil?id=eq.${state.editingUserId}`, { method: 'PATCH', body: JSON.stringify({ nombre, apellido, rol, mantenimiento_rol, puede_ver_retiros, puede_ver_errores }) });
       toast('Usuario actualizado', 'success');
     } catch { toast('Error al actualizar', 'error'); return; }
   }

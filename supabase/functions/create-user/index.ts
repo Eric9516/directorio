@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       .single();
     if (perfilErr || perfil?.rol !== 'admin') throw new Error('No autorizado — solo administradores');
 
-    const { email, password, nombre, apellido, rol, mantenimiento_rol, puede_ver_retiros } = await req.json();
+    const { email, password, nombre, apellido, rol, mantenimiento_rol, puede_ver_retiros, puede_ver_errores } = await req.json();
     if (!email || !password || !nombre) throw new Error('Faltan datos obligatorios');
     if (password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
     if (mantenimiento_rol && !['comun', 'admin'].includes(mantenimiento_rol)) {
@@ -73,6 +73,7 @@ Deno.serve(async (req) => {
       rol: ['admin', 'disabled'].includes(rol) ? rol : 'user',
       mantenimiento_rol: mantenimiento_rol || null,
       puede_ver_retiros: puede_ver_retiros === true,
+      puede_ver_errores: puede_ver_errores === true,
       activo: true,
     });
     if (insertErr) {
