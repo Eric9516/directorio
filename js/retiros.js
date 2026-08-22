@@ -2,7 +2,7 @@
 // repuestos, y se confirma como un solo registro (retiros + retiro_items).
 import { sbFetch } from './api.js';
 import { state } from './state.js';
-import { toast, esc, closeModal } from './ui.js';
+import { toast, esc, closeModal, field } from './ui.js';
 import { isMantenimientoAdmin } from './mantenimiento.js';
 import { renderSelectSectores } from './sectores.js';
 
@@ -51,18 +51,51 @@ export function removeFromRetiroCart(itemId) {
   renderRetiroCart();
 }
 
+function updateCarritoBadge() {
+  const badge = document.getElementById('carritoBadge');
+  if (!badge) return;
+  if (state.retiroCart.length) {
+    badge.textContent = state.retiroCart.length;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
 export function renderRetiroCart() {
   const section = document.getElementById('retiroCartSection');
-  const list = document.getElementById('retiroCartList');
-  if (!section || !list) return;
+  if (!section) return;
+  updateCarritoBadge();
 
   if (!state.retiroCart.length) {
-    section.style.display = 'none';
+    section.innerHTML = '<div class="empty-state"><div class="empty-icon">🛒</div><h3>No tenés nada para retirar todavía</h3><p>Buscá un repuesto y tocá "Retirar", o escaneá su QR.</p></div>';
     return;
   }
 
-  section.style.display = 'block';
-  list.innerHTML = state.retiroCart.map(c => `
+  const sectorPrevio = document.getElementById('retiroSector')?.value || '';
+  const obsPrevia = document.getElementById('retiroObsGeneral')?.value || '';
+
+  section.innerHTML = `
+    <div class="admin-card">
+      <div class="admin-card-header">📤 Ítems a retirar</div>
+      <div class="admin-card-body">
+        <div id="retiroCartList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+        <div class="form-group full" style="margin-bottom:12px">
+          <label>Sector *</label>
+          <select id="retiroSector"><option value="">Elegir sector...</option></select>
+        </div>
+        <div class="form-group full" style="margin-bottom:12px">
+          <label>Observación general (opcional)</label>
+          <input type="text" id="retiroObsGeneral" placeholder="Ej: para reparación de la envasadora">
+        </div>
+        <button class="btn btn-success" onclick="confirmRetiro()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Revisar y confirmar
+        </button>
+      </div>
+    </div>`;
+
+  document.getElementById('retiroCartList').innerHTML = state.retiroCart.map(c => `
     <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius-sm);flex-wrap:wrap">
       <div style="flex:1;min-width:140px">
         <div style="font-weight:700;font-size:13px">${esc(c.codigo)}</div>
@@ -74,6 +107,8 @@ export function renderRetiroCart() {
     </div>`).join('');
 
   renderSelectSectores(document.getElementById('retiroSector'));
+  document.getElementById('retiroSector').value = sectorPrevio;
+  document.getElementById('retiroObsGeneral').value = obsPrevia;
 }
 
 const historialExpandedDays = new Set([new Date().toISOString().slice(0, 10)]);
@@ -324,16 +359,39 @@ export async function exportarRetirosPeriodo() {
   }
 }
 
-export async function confirmRetiro() {
+// Paso 1: valida y muestra el resumen — todavía no guarda nada.
+export function confirmRetiro() {
   if (!state.retiroCart.length) return;
-  const sector_id = document.getElementById('retiroSector').value;
-  if (!sector_id) { toast('Elegí el sector antes de confirmar', 'error'); return; }
-  const observacion_general = document.getElementById('retiroObsGeneral').value.trim();
+  const sectorId = document.getElementById('retiroSector').value;
+  if (!sectorId) { toast('Elegí el sector antes de confirmar', 'error'); return; }
+  const sector = state.sectores.find(s => s.id === sectorId);
+  const observacionGeneral = document.getElementById('retiroObsGeneral').value.trim();
+
+  document.getElementById('resumenRetiroBody').innerHTML = `
+    <div class="detail-grid" style="margin-bottom:14px">
+      ${field('Sector', sector?.nombre)}
+      ${field('Observación general', observacionGeneral)}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${state.retiroCart.map(c => `
+        <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
+          <span><strong>${esc(c.codigo)}</strong> — ${esc(c.descripcion)}${c.observacion ? ` <span style="color:var(--text-muted)">(${esc(c.observacion)})</span>` : ''}</span>
+          <span style="font-weight:700;white-space:nowrap">x${c.cantidad}</span>
+        </div>`).join('')}
+    </div>`;
+
+  document.getElementById('modalResumenRetiro').classList.add('open');
+}
+
+// Paso 2: recién acá se escribe en la base, solo si el usuario aprueba el resumen.
+export async function enviarRetiroFinal() {
+  const sectorId = document.getElementById('retiroSector').value;
+  const observacionGeneral = document.getElementById('retiroObsGeneral').value.trim();
 
   try {
     const retiro = await sbFetch('/retiros', {
       method: 'POST',
-      body: JSON.stringify({ usuario_id: state.currentUser.id, sector_id, observacion_general: observacion_general || null }),
+      body: JSON.stringify({ usuario_id: state.currentUser.id, sector_id: sectorId, observacion_general: observacionGeneral || null }),
     });
     const retiroId = retiro[0].id;
 
@@ -351,8 +409,7 @@ export async function confirmRetiro() {
 
     toast('Retiro confirmado', 'success');
     state.retiroCart = [];
-    document.getElementById('retiroObsGeneral').value = '';
-    document.getElementById('retiroSector').value = '';
+    closeModal('modalResumenRetiro');
     renderRetiroCart();
   } catch (e) {
     toast('Error al confirmar el retiro: ' + e.message, 'error');

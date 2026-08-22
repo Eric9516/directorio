@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/components.css">
@@ -542,6 +543,9 @@
     <button class="nav-tab active" onclick="showMantTab('buscar')" id="manttab-buscar">
       🔍 Buscar
     </button>
+    <button class="nav-tab" onclick="showMantTab('carrito')" id="manttab-carrito">
+      🛒 A retirar <span id="carritoBadge" class="badge badge-rubro" style="display:none"></span>
+    </button>
     <button class="nav-tab" onclick="showMantTab('retiros')" id="manttab-retiros">
       📋 Retiros
     </button>
@@ -569,29 +573,7 @@
         <select class="filter-select" id="mantFiltroSubfamilia" onchange="renderItems()">
           <option value="">Todas las subfamilias</option>
         </select>
-      </div>
-
-      <div id="retiroCartSection" style="display:none;margin-bottom:16px">
-        <div class="admin-card">
-          <div class="admin-card-header">📤 Tu lista de retiro</div>
-          <div class="admin-card-body">
-            <div id="retiroCartList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
-            <div class="form-group full" style="margin-bottom:12px">
-              <label>Sector *</label>
-              <select id="retiroSector">
-                <option value="">Elegir sector...</option>
-              </select>
-            </div>
-            <div class="form-group full" style="margin-bottom:12px">
-              <label>Observación general (opcional)</label>
-              <input type="text" id="retiroObsGeneral" placeholder="Ej: para reparación de la envasadora">
-            </div>
-            <button class="btn btn-success" onclick="confirmRetiro()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-              Confirmar retiro
-            </button>
-          </div>
-        </div>
+        <button class="btn btn-primary btn-sm" onclick="abrirEscaner()">📷 Escanear QR</button>
       </div>
 
       <div class="table-wrap">
@@ -601,6 +583,14 @@
         </table>
       </div>
       <div class="prov-cards" id="mantItemsCards"></div>
+    </div>
+
+    <!-- CARRITO TAB -->
+    <div id="paneMantCarrito" style="display:none">
+      <div class="section-header">
+        <div class="section-title">🛒 A retirar</div>
+      </div>
+      <div id="retiroCartSection"></div>
     </div>
 
     <!-- RETIROS TAB -->
@@ -736,6 +726,25 @@
   </div>
 </div>
 
+<!-- ===== MODAL: ESCANEAR QR ===== -->
+<div class="modal-overlay" id="modalEscanear">
+  <div class="modal" style="max-width:420px;width:100%">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">📷</span> Escanear QR</div>
+      <button class="btn-close" onclick="cerrarEscaner()">✕</button>
+    </div>
+    <video id="scanVideo" autoplay playsinline muted style="width:100%;border-radius:var(--radius-sm);background:#000;display:block"></video>
+    <div id="scanStatus" style="text-align:center;font-size:13px;color:var(--text-muted);margin-top:10px;min-height:18px">Apuntá al código QR del repuesto...</div>
+
+    <div style="font-weight:700;font-size:13px;margin-top:14px;margin-bottom:6px">Vas escaneando:</div>
+    <div id="scanCartList" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto"></div>
+
+    <div class="modal-footer">
+      <button class="btn btn-success" onclick="terminarEscaneo()">✓ Listo, ver lista completa</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL: DETALLE REPUESTO ===== -->
 <div class="modal-overlay" id="modalItemDetalle">
   <div class="modal modal-lg">
@@ -747,6 +756,24 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modalItemDetalle')">Cerrar</button>
       <button class="btn btn-primary btn-sm" id="itemDetalleEditBtn" style="display:none" onclick="">✏️ Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: RESUMEN DE RETIRO ===== -->
+<div class="modal-overlay" id="modalResumenRetiro">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">📤</span> Revisá antes de confirmar</div>
+      <button class="btn-close" onclick="closeModal('modalResumenRetiro')">✕</button>
+    </div>
+    <div id="resumenRetiroBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalResumenRetiro')">Volver</button>
+      <button class="btn btn-success" onclick="enviarRetiroFinal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Sí, confirmar retiro
+      </button>
     </div>
   </div>
 </div>

@@ -4,7 +4,7 @@ import { state } from './state.js';
 import { isOwner } from './admin.js';
 import { loadItems } from './items.js';
 import { renderFamiliasPanel } from './familias.js';
-import { loadHistorialRetiros } from './retiros.js';
+import { loadHistorialRetiros, renderRetiroCart } from './retiros.js';
 import { renderSectoresPanel } from './sectores.js';
 
 // Espeja is_mantenimiento_admin() del lado de Supabase (misma condición).
@@ -70,9 +70,11 @@ export function showMantTab(tab) {
   document.querySelectorAll('#mantenimientoScreen .nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('manttab-' + tab).classList.add('active');
   document.getElementById('paneMantBuscar').style.display  = tab === 'buscar'  ? 'block' : 'none';
+  document.getElementById('paneMantCarrito').style.display = tab === 'carrito' ? 'block' : 'none';
   document.getElementById('paneMantRetiros').style.display = tab === 'retiros' ? 'block' : 'none';
   document.getElementById('paneMantAdmin').style.display   = tab === 'admin'   ? 'block' : 'none';
   if (tab === 'admin') showMantAdminSubtab('repuestos');
+  if (tab === 'carrito') renderRetiroCart();
   if (tab === 'retiros') {
     document.getElementById('historialRetirosTitle').textContent = isMantenimientoAdmin() ? '📋 Historial de retiros' : '📋 Mis retiros';
     loadHistorialRetiros();

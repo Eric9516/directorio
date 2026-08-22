@@ -34,8 +34,9 @@ import { renderFamiliasPanel, saveFamiliaNombre, saveSubfamiliaNombre } from './
 import { addSector, saveSectorNombre, toggleSectorActivo } from './sectores.js';
 import { abrirGenerarQR, renderQRBusqueda, agregarQRSeleccion, confirmarCantidadQR,
          actualizarCantidadQR, quitarQRSeleccion, generarQREtiquetasSeleccion } from './qrLabels.js';
+import { abrirEscaner, cerrarEscaner, terminarEscaneo, removeFromRetiroCartYRefrescarScan } from './scanner.js';
 import { addToRetiroCart, updateRetiroCantidad, updateRetiroObservacion,
-         removeFromRetiroCart, confirmRetiro, toggleHistorialDia,
+         removeFromRetiroCart, confirmRetiro, enviarRetiroFinal, toggleHistorialDia,
          updateHistorialCantidad, deleteHistorialItem, renderHistorialRetiros,
          exportarRetirosPendientes, abrirExportarPeriodo, exportarRetirosPeriodo } from './retiros.js';
 import { sbFetch } from './api.js';
@@ -295,10 +296,11 @@ Object.assign(window, {
   descargarQRDeItem,
   abrirGenerarQR, renderQRBusqueda, agregarQRSeleccion, confirmarCantidadQR,
   actualizarCantidadQR, quitarQRSeleccion, generarQREtiquetasSeleccion,
+  abrirEscaner, cerrarEscaner, terminarEscaneo, removeFromRetiroCartYRefrescarScan,
   showMantTab, showMantAdminSubtab, renderFamiliasPanel,
   saveFamiliaNombre, saveSubfamiliaNombre,
   addToRetiroCart, updateRetiroCantidad, updateRetiroObservacion,
-  removeFromRetiroCart, confirmRetiro, toggleHistorialDia,
+  removeFromRetiroCart, confirmRetiro, enviarRetiroFinal, toggleHistorialDia,
   updateHistorialCantidad, deleteHistorialItem, renderHistorialRetiros,
   exportarRetirosPendientes, abrirExportarPeriodo, exportarRetirosPeriodo,
   addSector, saveSectorNombre, toggleSectorActivo,
