@@ -41,6 +41,7 @@ import { addToRetiroCart, updateRetiroCantidad, updateRetiroObservacion,
          exportarRetirosPendientes, abrirExportarPeriodo, exportarRetirosPeriodo } from './retiros.js';
 import { sbFetch } from './api.js';
 import { initErrorLogging, loadErrorLogs, limpiarErrorLogs, puedeVerErrores } from './errorLog.js';
+import { loadPapelera, restaurarDePapelera, purgarDePapelera, puedeVerPapelera } from './papelera.js';
 
 initErrorLogging();
 
@@ -122,6 +123,7 @@ const ADMIN_TABS = [
   { id: 'usuarios',      group: 'general',       check: () => state.isAdmin },
   { id: 'historial',     group: 'general',       check: () => isOwner() },
   { id: 'errores',       group: 'general',       check: () => puedeVerErrores() },
+  { id: 'papelera',      group: 'general',       check: () => puedeVerPapelera() },
 ];
 
 let adminPreviousScreen = 'directorio';
@@ -257,6 +259,7 @@ function showAdminTab(tab) {
   if (tab === 'usuarios')  loadUsers();
   if (tab === 'historial') loadAuditLog();
   if (tab === 'errores')   loadErrorLogs();
+  if (tab === 'papelera')  loadPapelera();
 }
 
 // Cambiar de grupo (nivel 1) selecciona automáticamente su primera pestaña visible.
@@ -390,6 +393,8 @@ Object.assign(window, {
   addSector, saveSectorNombre, toggleSectorActivo,
   // Log de errores
   loadErrorLogs, limpiarErrorLogs,
+  // Papelera
+  restaurarDePapelera, purgarDePapelera,
 });
 
 // El módulo principal cargó bien: si una carga anterior había fallado y disparado

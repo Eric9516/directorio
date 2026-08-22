@@ -354,9 +354,12 @@ export async function saveItem() {
 
 export async function deleteItem(id) {
   const it = state.items.find(x => x.id === id);
-  if (!confirm(`¿Eliminar "${it?.codigo}"? Esta acción no se puede deshacer.`)) return;
+  if (!confirm(`¿Eliminar "${it?.codigo}"? Queda en la Papelera hasta que el superadmin lo confirme.`)) return;
   try {
-    await sbFetch(`/items?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
+    await sbFetch(`/items?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ activo: false, eliminado_por: state.currentUser.id, eliminado_at: new Date().toISOString() }),
+    });
     toast('Repuesto eliminado', 'error');
     closeModal('modalItemDetalle');
     await loadItems();

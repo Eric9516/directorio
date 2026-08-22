@@ -4,7 +4,7 @@ import { toast, closeModal, esc, field } from './ui.js';
 
 export async function loadProveedores() {
   try {
-    state.proveedores = await sbFetch('/proveedores?select=*&order=nombre.asc');
+    state.proveedores = await sbFetch('/proveedores?select=*&eliminado=eq.false&order=nombre.asc');
     state.contactos   = await sbFetch('/contactos?select=*');
     renderStats();
     renderProveedores();
@@ -210,9 +210,12 @@ export async function saveProveedor() {
 
 export async function deleteProveedor(id) {
   const p = state.proveedores.find(x => x.id === id);
-  if (!confirm(`¿Eliminar a "${p?.nombre}"? Esta acción no se puede deshacer.`)) return;
+  if (!confirm(`¿Eliminar a "${p?.nombre}"? Queda en la Papelera hasta que el superadmin lo confirme.`)) return;
   try {
-    await sbFetch(`/proveedores?id=eq.${id}`, { method: 'DELETE' });
+    await sbFetch(`/proveedores?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ eliminado: true, eliminado_por: state.currentUser.id, eliminado_at: new Date().toISOString() }),
+    });
     toast('Proveedor eliminado', 'error');
     await loadProveedores();
   } catch { toast('Error al eliminar', 'error'); }
