@@ -72,10 +72,10 @@ export async function sbFetch(path, opts = {}) {
   return text ? JSON.parse(text) : [];
 }
 
-export async function sbStorageUpload(path, blob, contentType = 'application/pdf') {
+export async function sbStorageUpload(path, blob, contentType = 'application/pdf', bucket = 'rotulos') {
   await ensureFreshToken();
   const token = localStorage.getItem('sb_token');
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/rotulos/${path}`, {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
     method: 'POST',
     headers: {
       'apikey': SUPABASE_KEY,
@@ -89,13 +89,13 @@ export async function sbStorageUpload(path, blob, contentType = 'application/pdf
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || `Error ${res.status}`);
   }
-  return `${SUPABASE_URL}/storage/v1/object/public/rotulos/${path}`;
+  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 }
 
-export async function sbStorageDelete(path) {
+export async function sbStorageDelete(path, bucket = 'rotulos') {
   await ensureFreshToken();
   const token = localStorage.getItem('sb_token');
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/rotulos/${path}`, {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
     method: 'DELETE',
     headers: {
       'apikey': SUPABASE_KEY,

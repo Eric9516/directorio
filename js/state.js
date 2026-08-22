@@ -25,4 +25,15 @@ export const state = {
   // Tareas Semáforo
   tareas: [],
   currentTaskId: null,
+  // Mantenimiento
+  mantenimientoOnly: false,
+  items: [],
+  familias: [],
+  subfamilias: [],
+  editingItemId: null,
+  retiroCart: [],
+  historialRetiros: [],
+  historialUsuarios: {},
+  historialAdmin: false,
+  sectores: [],
 };

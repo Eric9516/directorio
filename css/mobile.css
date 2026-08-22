@@ -124,6 +124,7 @@
   .td-actions { flex-wrap: wrap; gap: 3px; }
   .btn-icon { min-width: 36px; min-height: 36px; padding: 0; justify-content: center; align-items: center; }
   .header-title { display: none; }
+  .hide-mobile { display: none; }
   .contact-row-grid { grid-template-columns: 1fr; }
 
   /* Tabla → cards */

@@ -42,9 +42,12 @@ Deno.serve(async (req) => {
       .single();
     if (perfilErr || perfil?.rol !== 'admin') throw new Error('No autorizado — solo administradores');
 
-    const { email, password, nombre, apellido, rol } = await req.json();
+    const { email, password, nombre, apellido, rol, mantenimiento_rol } = await req.json();
     if (!email || !password || !nombre) throw new Error('Faltan datos obligatorios');
     if (password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
+    if (mantenimiento_rol && !['comun', 'admin'].includes(mantenimiento_rol)) {
+      throw new Error('Rol de mantenimiento inválido');
+    }
 
     const secretKey = Deno.env.get('PROJECT_SECRET_KEY');
     if (!secretKey) throw new Error('Falta configurar el secreto PROJECT_SECRET_KEY en la función');
@@ -65,6 +68,7 @@ Deno.serve(async (req) => {
       apellido: apellido || '',
       email,
       rol: rol === 'admin' ? 'admin' : 'user',
+      mantenimiento_rol: mantenimiento_rol || null,
       activo: true,
     });
     if (insertErr) {

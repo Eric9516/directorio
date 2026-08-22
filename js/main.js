@@ -24,6 +24,20 @@ import { loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
          openTaskDetail, completeTask, cancelTask,
          openReprogramModal, saveReprogram,
          toggleVistaDropdown, setTaskView }          from './tareas.js';
+import { initMantenimientoAccess, showMantenimiento, exitMantenimiento,
+         showMantTab, showMantAdminSubtab }                            from './mantenimiento.js';
+import { renderItems, onFamiliaFiltroChange, openItemModal, onModalFamiliaChange,
+         updateCodigoPreview, promptNuevaFamilia, promptNuevaSubfamilia,
+         saveItem, deleteItem, openItemDetalle, subirFotoDetalle, eliminarFotoDetalle,
+         descargarQRDeItem }                                           from './items.js';
+import { renderFamiliasPanel, saveFamiliaNombre, saveSubfamiliaNombre } from './familias.js';
+import { addSector, saveSectorNombre, toggleSectorActivo } from './sectores.js';
+import { abrirGenerarQR, renderQRBusqueda, agregarQRSeleccion, confirmarCantidadQR,
+         actualizarCantidadQR, quitarQRSeleccion, generarQREtiquetasSeleccion } from './qrLabels.js';
+import { addToRetiroCart, updateRetiroCantidad, updateRetiroObservacion,
+         removeFromRetiroCart, confirmRetiro, toggleHistorialDia,
+         updateHistorialCantidad, deleteHistorialItem, renderHistorialRetiros,
+         exportarRetirosPendientes, abrirExportarPeriodo, exportarRetirosPeriodo } from './retiros.js';
 import { sbFetch } from './api.js';
 
 // ===== NOMBRE PERSONALIZADO =====
@@ -43,9 +57,12 @@ function updateUserDisplay() {
 // ===== APP INIT =====
 async function initApp() {
   document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('appScreen').classList.add('visible');
 
+  const mantenimientoOnly = initMantenimientoAccess();
   updateUserDisplay();
+  if (mantenimientoOnly) return; // usuario común de mantenimiento: no ve el resto de la app
+
+  document.getElementById('appScreen').classList.add('visible');
 
   if (state.isAdmin) {
     document.getElementById('tab-admin').style.display      = 'flex';
@@ -60,6 +77,11 @@ async function initApp() {
 }
 
 function goHome() {
+  if (state.mantenimientoOnly) return;
+  if (document.getElementById('mantenimientoScreen').classList.contains('visible')) {
+    exitMantenimiento();
+    return;
+  }
   showTab('proveedores');
 }
 
@@ -265,4 +287,19 @@ Object.assign(window, {
   openReprogramModal, saveReprogram,
   toggleVistaDropdown, setTaskView,
   _currentTaskId: () => state.currentTaskId,
+  // Mantenimiento
+  showMantenimiento, exitMantenimiento, renderItems, onFamiliaFiltroChange,
+  openItemModal, onModalFamiliaChange, updateCodigoPreview,
+  promptNuevaFamilia, promptNuevaSubfamilia, saveItem, deleteItem,
+  openItemDetalle, subirFotoDetalle, eliminarFotoDetalle,
+  descargarQRDeItem,
+  abrirGenerarQR, renderQRBusqueda, agregarQRSeleccion, confirmarCantidadQR,
+  actualizarCantidadQR, quitarQRSeleccion, generarQREtiquetasSeleccion,
+  showMantTab, showMantAdminSubtab, renderFamiliasPanel,
+  saveFamiliaNombre, saveSubfamiliaNombre,
+  addToRetiroCart, updateRetiroCantidad, updateRetiroObservacion,
+  removeFromRetiroCart, confirmRetiro, toggleHistorialDia,
+  updateHistorialCantidad, deleteHistorialItem, renderHistorialRetiros,
+  exportarRetirosPendientes, abrirExportarPeriodo, exportarRetirosPeriodo,
+  addSector, saveSectorNombre, toggleSectorActivo,
 });

@@ -74,15 +74,17 @@ export async function loadUsers() {
     const users = await sbFetch('/usuarios_perfil?select=*&order=nombre.asc');
     const tbody = document.getElementById('usersTableBody');
     if (!users.length) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Sin usuarios registrados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Sin usuarios registrados</td></tr>';
       return;
     }
     const owner = isOwner();
+    const MANT_LABELS = { admin: 'Admin Mant.', comun: 'Común' };
     tbody.innerHTML = users.map(u => `
       <tr>
         <td><strong>${esc(u.nombre || '')} ${esc(u.apellido || '')}</strong></td>
         <td>${esc(u.email || '')}</td>
         <td><span class="badge ${u.rol === 'admin' ? 'badge-rubro' : 'badge-active'}">${u.rol === 'admin' ? 'Admin' : 'Usuario'}</span></td>
+        <td>${u.mantenimiento_rol ? `<span class="badge badge-rubro">${MANT_LABELS[u.mantenimiento_rol]}</span>` : '<span style="color:var(--text-muted);font-size:12px">—</span>'}</td>
         <td><span class="badge ${u.activo !== false ? 'badge-active' : 'badge-inactive'}">${u.activo !== false ? 'Activo' : 'Inactivo'}</span></td>
         <td><div class="td-actions">
           ${owner ? `<button class="btn btn-ghost btn-sm" onclick="openUserModal('${u.id}')">Editar</button>` : ''}
@@ -95,15 +97,27 @@ export async function loadUsers() {
   } catch { toast('Error al cargar usuarios', 'error'); }
 }
 
-export function openUserModal(id = null) {
+export async function openUserModal(id = null) {
   state.editingUserId = id;
   document.getElementById('modalUserTitle').textContent = id ? 'Editar Usuario' : 'Nuevo Usuario';
   document.getElementById('u_passGroup').style.display = id ? 'none' : 'block';
+
   if (id) {
-    ['nombre', 'apellido', 'email'].forEach(f => { document.getElementById('u_' + f).value = ''; });
+    try {
+      const [u] = await sbFetch(`/usuarios_perfil?id=eq.${id}&select=*`);
+      document.getElementById('u_nombre').value = u?.nombre || '';
+      document.getElementById('u_apellido').value = u?.apellido || '';
+      document.getElementById('u_email').value = u?.email || '';
+      document.getElementById('u_rol').value = u?.rol === 'admin' ? 'admin' : 'user';
+      document.getElementById('u_mantenimiento_rol').value = u?.mantenimiento_rol || '';
+    } catch {
+      toast('Error al cargar el usuario', 'error');
+      return;
+    }
   } else {
     ['nombre', 'apellido', 'email', 'pass'].forEach(f => { const el = document.getElementById('u_' + f); if (el) el.value = ''; });
     document.getElementById('u_rol').value = 'user';
+    document.getElementById('u_mantenimiento_rol').value = '';
   }
   document.getElementById('modalUser').classList.add('open');
 }
@@ -114,6 +128,7 @@ export async function saveUser() {
   const email    = document.getElementById('u_email').value.trim();
   const pass     = document.getElementById('u_pass').value;
   const rol      = document.getElementById('u_rol').value;
+  const mantenimiento_rol = document.getElementById('u_mantenimiento_rol').value || null;
 
   if (!nombre || !email) { toast('Nombre y email son obligatorios', 'error'); return; }
 
@@ -123,7 +138,7 @@ export async function saveUser() {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
         method: 'POST',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${localStorage.getItem('sb_token')}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: pass, nombre, apellido, rol })
+        body: JSON.stringify({ email, password: pass, nombre, apellido, rol, mantenimiento_rol })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al crear usuario');
@@ -131,7 +146,7 @@ export async function saveUser() {
     } catch (e) { toast('Error: ' + e.message, 'error'); return; }
   } else {
     try {
-      await sbFetch(`/usuarios_perfil?id=eq.${state.editingUserId}`, { method: 'PATCH', body: JSON.stringify({ nombre, apellido, rol }) });
+      await sbFetch(`/usuarios_perfil?id=eq.${state.editingUserId}`, { method: 'PATCH', body: JSON.stringify({ nombre, apellido, rol, mantenimiento_rol }) });
       toast('Usuario actualizado', 'success');
     } catch { toast('Error al actualizar', 'error'); return; }
   }

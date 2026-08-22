@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/components.css">
@@ -54,6 +55,9 @@
       </div>
     </div>
     <div class="header-right">
+      <button class="btn-mantenimiento" id="btnMantenimiento" onclick="showMantenimiento()" title="Modo Mantenimiento">
+        🔧 <span class="hide-mobile">Mantenimiento</span>
+      </button>
       <div class="user-badge" onclick="toggleUserDropdown()">
         <div class="user-avatar" id="userAvatar">U</div>
         <span class="user-name" id="userName">Usuario</span>
@@ -467,6 +471,7 @@
                   <th>Nombre</th>
                   <th>Email</th>
                   <th>Rol</th>
+                  <th>Mantenimiento</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
@@ -504,6 +509,326 @@
   <!-- ===== BOTÓN FLOTANTE "NUEVA TAREA" (mobile, solo en tareas) ===== -->
   <button class="fab-new-task" onclick="openNewTaskModal()" aria-label="Nueva tarea">+</button>
 
+</div>
+
+<!-- ===== MANTENIMIENTO SCREEN ===== -->
+<div id="mantenimientoScreen">
+  <header class="app-header">
+    <div class="header-logo">
+      <div class="header-logo-fallback">🔧</div>
+      <div>
+        <div class="header-logo-fallback" id="mantHeaderName">Cremac</div>
+        <div class="header-title">Mantenimiento</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-volver-directorio" id="btnVolverDirectorio" onclick="exitMantenimiento()" title="Volver a Directorio">
+        ← <span class="hide-mobile">Directorio</span>
+      </button>
+      <div class="user-badge" onclick="toggleUserDropdown()">
+        <div class="user-avatar" id="mantUserAvatar">U</div>
+        <span class="user-name" id="mantUserName">Usuario</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menú">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <nav class="app-nav">
+    <button class="nav-tab active" onclick="showMantTab('buscar')" id="manttab-buscar">
+      🔍 Buscar
+    </button>
+    <button class="nav-tab" onclick="showMantTab('retiros')" id="manttab-retiros">
+      📋 Retiros
+    </button>
+    <div class="nav-divider nav-divider-push" id="manttabDividerAdmin" style="display:none"></div>
+    <button class="nav-tab" onclick="showMantTab('admin')" id="manttab-admin" style="display:none">
+      ⚙️ Admin
+    </button>
+  </nav>
+
+  <main class="app-main">
+
+    <!-- BUSCAR TAB -->
+    <div id="paneMantBuscar">
+      <div class="section-header">
+        <div class="section-title">🔍 Buscar repuestos</div>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="mantSearch" placeholder="Código, número o descripción..." oninput="renderItems()">
+        </div>
+        <select class="filter-select" id="mantFiltroFamilia" onchange="onFamiliaFiltroChange()">
+          <option value="">Todas las familias</option>
+        </select>
+        <select class="filter-select" id="mantFiltroSubfamilia" onchange="renderItems()">
+          <option value="">Todas las subfamilias</option>
+        </select>
+      </div>
+
+      <div id="retiroCartSection" style="display:none;margin-bottom:16px">
+        <div class="admin-card">
+          <div class="admin-card-header">📤 Tu lista de retiro</div>
+          <div class="admin-card-body">
+            <div id="retiroCartList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+            <div class="form-group full" style="margin-bottom:12px">
+              <label>Sector *</label>
+              <select id="retiroSector">
+                <option value="">Elegir sector...</option>
+              </select>
+            </div>
+            <div class="form-group full" style="margin-bottom:12px">
+              <label>Observación general (opcional)</label>
+              <input type="text" id="retiroObsGeneral" placeholder="Ej: para reparación de la envasadora">
+            </div>
+            <button class="btn btn-success" onclick="confirmRetiro()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Confirmar retiro
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="mantItemsHeadRow"><th>Código</th><th>Descripción</th><th>Familia</th><th>Ubicación</th><th>Stock</th></tr></thead>
+          <tbody id="mantItemsTableBody"></tbody>
+        </table>
+      </div>
+      <div class="prov-cards" id="mantItemsCards"></div>
+    </div>
+
+    <!-- RETIROS TAB -->
+    <div id="paneMantRetiros" style="display:none">
+      <div class="section-header">
+        <div class="section-title" id="historialRetirosTitle">📋 Mis retiros</div>
+        <div class="section-actions" id="historialExportActions" style="display:none">
+          <button class="btn btn-ghost btn-sm" onclick="exportarRetirosPendientes()">📥 Exportar pendientes</button>
+          <button class="btn btn-ghost btn-sm" onclick="abrirExportarPeriodo()">🗓️ Exportar por período</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <input type="date" id="historialFecha" onchange="loadHistorialRetiros()" style="max-width:200px">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('historialFecha').value='';loadHistorialRetiros()">Ver últimos 30 días</button>
+        <div id="historialFiltroUsuarioWrap" style="display:none">
+          <select class="filter-select" id="historialFiltroUsuario" onchange="renderHistorialRetiros()">
+            <option value="">Todos los usuarios</option>
+          </select>
+        </div>
+      </div>
+      <div id="historialRetirosList"></div>
+    </div>
+
+    <!-- ADMIN TAB -->
+    <div id="paneMantAdmin" style="display:none">
+      <div class="admin-subnav">
+        <button class="admin-subtab active" id="mantAdminSubtab-repuestos" onclick="showMantAdminSubtab('repuestos')">🔧 Repuestos</button>
+        <button class="admin-subtab" id="mantAdminSubtab-sectores" onclick="showMantAdminSubtab('sectores')">🏭 Sectores</button>
+        <button class="admin-subtab" id="mantAdminSubtab-familias" onclick="showMantAdminSubtab('familias')">🏷️ Familias y subfamilias</button>
+      </div>
+
+      <div id="mantAdminPane-repuestos" class="admin-pane">
+        <div class="admin-card" style="max-width:560px">
+          <div class="admin-card-header">🔧 Repuestos</div>
+          <div class="admin-card-body">
+            <p style="font-size:13px;color:var(--text-mid);margin-bottom:14px">
+              Para editar o eliminar un repuesto existente, buscalo en la pestaña "Buscar" y usá los botones de esa fila.
+            </p>
+            <button class="btn btn-primary" onclick="openItemModal()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nuevo repuesto
+            </button>
+            <button class="btn btn-ghost" onclick="abrirGenerarQR()">
+              🏷️ Generar etiquetas QR
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="mantAdminPane-sectores" class="admin-pane" style="display:none">
+        <div class="admin-card" style="max-width:480px">
+          <div class="admin-card-header">🏭 Sectores</div>
+          <div class="admin-card-body">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">
+              Es obligatorio elegir un sector al confirmar un retiro. Los nombres se guardan solos al salir del campo.
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:16px">
+              <input type="text" id="nuevoSectorNombre" placeholder="Ej: Producción">
+              <button class="btn btn-primary btn-sm" onclick="addSector()">Agregar</button>
+            </div>
+            <div id="sectoresPanelList" style="display:flex;flex-direction:column;gap:10px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="mantAdminPane-familias" class="admin-pane" style="display:none">
+        <div class="admin-card">
+          <div class="admin-card-header">🏷️ Familias y subfamilias</div>
+          <div class="admin-card-body">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">
+              Los nombres se guardan solos al salir de cada campo (no hace falta un botón "Guardar").
+            </div>
+            <input type="text" id="famBuscar" placeholder="Buscar código o nombre..." oninput="renderFamiliasPanel()" style="margin-bottom:14px">
+            <div id="famPanelList" style="display:flex;flex-direction:column;gap:12px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ===== MODAL: REPUESTO ===== -->
+<div class="modal-overlay" id="modalItem">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">🔧</span> <span id="modalItemTitle">Nuevo Repuesto</span></div>
+      <button class="btn-close" onclick="closeModal('modalItem')">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Familia *</label>
+        <div style="display:flex;gap:6px">
+          <select id="it_familia" onchange="onModalFamiliaChange()" style="flex:1"></select>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="promptNuevaFamilia()" title="Crear nueva familia">＋</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Subfamilia *</label>
+        <div style="display:flex;gap:6px">
+          <select id="it_subfamilia" onchange="updateCodigoPreview()" style="flex:1"></select>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="promptNuevaSubfamilia()" title="Crear nueva subfamilia">＋</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Número *</label>
+        <input type="text" id="it_numero" placeholder="Ej: 23" inputmode="numeric" oninput="updateCodigoPreview()">
+      </div>
+      <div class="form-group">
+        <label>Código</label>
+        <input type="text" id="it_codigo_preview" disabled placeholder="Se arma solo...">
+      </div>
+      <div class="form-group full">
+        <label>Descripción *</label>
+        <textarea id="it_descripcion" rows="2" placeholder="Descripción del repuesto"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Ubicación</label>
+        <input type="text" id="it_ubicacion" placeholder="Ej: Estante 3B">
+      </div>
+      <div class="form-group">
+        <label>Stock</label>
+        <input type="number" id="it_stock" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalItem')">Cancelar</button>
+      <button class="btn btn-success" onclick="saveItem()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: DETALLE REPUESTO ===== -->
+<div class="modal-overlay" id="modalItemDetalle">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">🔧</span> <span id="itemDetalleTitle">Repuesto</span></div>
+      <button class="btn-close" onclick="closeModal('modalItemDetalle')">✕</button>
+    </div>
+    <div id="itemDetalleBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalItemDetalle')">Cerrar</button>
+      <button class="btn btn-primary btn-sm" id="itemDetalleEditBtn" style="display:none" onclick="">✏️ Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: GENERAR ETIQUETAS QR ===== -->
+<div class="modal-overlay" id="modalGenerarQR">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">🏷️</span> Generar etiquetas QR</div>
+      <button class="btn-close" onclick="closeModal('modalGenerarQR')">✕</button>
+    </div>
+    <div class="form-group full" style="margin-bottom:6px">
+      <label>Buscar repuesto para agregar</label>
+      <input type="text" id="qrBuscarInput" placeholder="Código o descripción..." oninput="renderQRBusqueda()">
+    </div>
+    <div id="qrBusquedaResultados" style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:16px"></div>
+
+    <div style="font-weight:700;font-size:13px;margin-bottom:8px">Etiquetas a generar</div>
+    <div id="qrSeleccionList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+
+    <div class="form-group full" style="margin-bottom:0">
+      <label>Qué mostrar en cada etiqueta</label>
+      <select id="qrFormato">
+        <option value="qr">Solo el QR</option>
+        <option value="qr_codigo" selected>QR + Código</option>
+        <option value="qr_nombre">QR + Nombre</option>
+        <option value="qr_codigo_nombre">QR + Código y Nombre</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalGenerarQR')">Cancelar</button>
+      <button class="btn btn-success" onclick="generarQREtiquetasSeleccion()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Generar PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: CANTIDAD DE ETIQUETAS QR ===== -->
+<div class="modal-overlay" id="modalCantidadQR">
+  <div class="modal" style="max-width:360px;width:100%">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">🔢</span> Cantidad</div>
+      <button class="btn-close" onclick="closeModal('modalCantidadQR')">✕</button>
+    </div>
+    <div class="form-group full" style="margin-bottom:0">
+      <label id="cantidadQRTitulo">¿Cuántas etiquetas querés generar?</label>
+      <input type="number" id="cantidadQRInput" min="1" value="1" onkeydown="if(event.key==='Enter')confirmarCantidadQR()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalCantidadQR')">Cancelar</button>
+      <button class="btn btn-success" onclick="confirmarCantidadQR()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: EXPORTAR RETIROS POR PERÍODO ===== -->
+<div class="modal-overlay" id="modalExportarPeriodo">
+  <div class="modal" style="max-width:420px;width:100%">
+    <div class="modal-header">
+      <div class="modal-title"><span class="accent">🗓️</span> Exportar por período</div>
+      <button class="btn-close" onclick="closeModal('modalExportarPeriodo')">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Desde</label>
+        <input type="date" id="expPeriodoDesde">
+      </div>
+      <div class="form-group">
+        <label>Hasta</label>
+        <input type="date" id="expPeriodoHasta">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalExportarPeriodo')">Cancelar</button>
+      <button class="btn btn-success" onclick="exportarRetirosPeriodo()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Exportar
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- ===== MODAL: PROVEEDOR ===== -->
@@ -857,10 +1182,18 @@
         <input type="password" id="u_pass" placeholder="Mínimo 6 caracteres">
       </div>
       <div class="form-group full">
-        <label>Rol</label>
+        <label>Permisos de Directorio</label>
         <select id="u_rol">
           <option value="user">Usuario</option>
           <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Permisos de Mantenimiento</label>
+        <select id="u_mantenimiento_rol">
+          <option value="">Sin acceso (solo Directorio)</option>
+          <option value="comun">Común — solo Mantenimiento (buscar y retirar)</option>
+          <option value="admin">Administrador de Mantenimiento</option>
         </select>
       </div>
     </div>
@@ -1015,6 +1348,9 @@
     <div style="height:1px;background:var(--border);margin:8px 16px;display:none" id="mmDividerAdmin"></div>
     <button class="mobile-nav-item" id="mm-admin" style="display:none" onclick="showTab('admin');closeMobileMenu()">
       <span class="mobile-nav-icon">⚙️</span><span>Administrador</span>
+    </button>
+    <button class="mobile-nav-item" id="mm-mantenimiento" style="display:none" onclick="showMantenimiento();closeMobileMenu()">
+      <span class="mobile-nav-icon">🔧</span><span>Mantenimiento</span>
     </button>
     <div style="height:1px;background:var(--border);margin:8px 16px"></div>
     <button class="mobile-nav-item" onclick="closeMobileMenu();openProfile()">

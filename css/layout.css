@@ -65,6 +65,32 @@
 #appScreen { display: none; min-height: 100vh; flex-direction: column; }
 #appScreen.visible { display: flex; }
 
+#mantenimientoScreen { display: none; min-height: 100vh; flex-direction: column; }
+#mantenimientoScreen.visible { display: flex; }
+#mantenimientoScreen .app-header { background: linear-gradient(90deg, var(--mant) 0%, var(--mant-mid) 100%); box-shadow: 0 2px 12px rgba(154,91,18,0.25); }
+#mantenimientoScreen .nav-tab.active { color: var(--mant-mid); border-bottom-color: var(--mant); }
+#mantenimientoScreen .nav-tab:hover { color: var(--mant-mid); }
+#mantenimientoScreen .admin-subtab.active { color: var(--mant-mid); border-bottom-color: var(--mant); }
+#mantenimientoScreen .admin-subtab:hover { color: var(--mant-mid); }
+
+.btn-mantenimiento {
+  display: none; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.14);
+  color: white; font-size: 13px; font-weight: 700;
+  padding: 7px 14px; border-radius: 30px;
+  cursor: pointer; border: none; transition: background 0.2s;
+}
+.btn-mantenimiento:hover { background: rgba(255,255,255,0.26); }
+
+.btn-volver-directorio {
+  display: none; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.14);
+  color: white; font-size: 13px; font-weight: 700;
+  padding: 7px 14px; border-radius: 30px;
+  cursor: pointer; border: none; transition: background 0.2s;
+}
+.btn-volver-directorio:hover { background: rgba(255,255,255,0.26); }
+
 /* ===== HEADER ===== */
 .app-header {
   background: linear-gradient(90deg, var(--blue) 0%, var(--blue-mid) 100%);
