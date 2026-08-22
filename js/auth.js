@@ -1,6 +1,6 @@
 import { sbAuth, sbFetch } from './api.js';
 import { state } from './state.js';
-import { toast, closeMobileMenu } from './ui.js';
+import { toast } from './ui.js';
 
 export async function doLogin() {
   const email = document.getElementById('loginEmail').value.trim();
@@ -67,8 +67,12 @@ export async function loadUserProfile(uid, email) {
 
 export function doLogout() {
   if (!confirm('¿Cerrar sesión?')) return;
-  closeMobileMenu();
   ['sb_token', 'sb_refresh', 'sb_user_id', 'sb_user_email'].forEach(k => localStorage.removeItem(k));
-  document.getElementById('authScreen').style.display = 'flex';
-  document.getElementById('appScreen').classList.remove('visible');
+  // Recarga completa a propósito: hay bastantes botones/pestañas (Mantenimiento, Admin, etc.)
+  // que en el código solo se MUESTRAN si el usuario tiene permiso, pero nunca se vuelven a
+  // OCULTAR — dependen de arrancar desde el HTML base. Si solo limpiáramos el estado en memoria,
+  // el próximo usuario que entre en la misma pestaña del navegador podía heredar botones visibles
+  // del usuario anterior (ej: entrar a Mantenimiento sin tener permiso) hasta refrescar la página.
+  // Recargar garantiza que cada sesión arranca de cero, sin nada heredado.
+  location.reload();
 }

@@ -1,4 +1,4 @@
-import { state }                                                     from './state.js';
+import { state, guardarUbicacion, leerUbicacionGuardada }           from './state.js';
 import { closeModal, toast, toggleMobileMenu, closeMobileMenu }      from './ui.js';
 import { doLogin, doLogout, loadUserProfile }                        from './auth.js';
 import { loadConfig, saveConfig, handleLogoUpload }                  from './config.js';
@@ -25,7 +25,7 @@ import { loadTareas, setTareasFilter, openNewTaskModal, saveNewTask,
          openReprogramModal, saveReprogram,
          toggleVistaDropdown, setTaskView }          from './tareas.js';
 import { initMantenimientoAccess, showMantenimiento, exitMantenimiento,
-         showMantTab, showMantAdminSubtab }                            from './mantenimiento.js';
+         showMantTab, showMantAdminSubtab, isMantenimientoAdmin }      from './mantenimiento.js';
 import { renderItems, onFamiliaFiltroChange, openItemModal, onModalFamiliaChange,
          updateCodigoPreview, promptNuevaFamilia, promptNuevaSubfamilia,
          saveItem, deleteItem, openItemDetalle, subirFotoDetalle, eliminarFotoDetalle,
@@ -74,7 +74,14 @@ async function initApp() {
 
   await loadConfig();
   await loadProveedores();
-  showTab('proveedores');
+
+  const guardada = leerUbicacionGuardada();
+  if (guardada?.screen === 'mantenimiento' && isMantenimientoAdmin()) {
+    showMantenimiento(true);
+  } else {
+    const dirTabsValidos = ['proveedores', 'comisionistas', 'rotulos', 'tareas', ...(state.isAdmin ? ['admin'] : [])];
+    showTab(dirTabsValidos.includes(guardada?.dirTab) ? guardada.dirTab : 'proveedores');
+  }
 }
 
 function goHome() {
@@ -150,6 +157,7 @@ async function saveProfile() {
 
 // ===== TABS =====
 function showTab(tab) {
+  guardarUbicacion({ screen: 'directorio', dirTab: tab });
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
   document.querySelectorAll('.mobile-nav-item').forEach(t => t.classList.remove('active'));
@@ -305,3 +313,7 @@ Object.assign(window, {
   exportarRetirosPendientes, abrirExportarPeriodo, exportarRetirosPeriodo,
   addSector, saveSectorNombre, toggleSectorActivo,
 });
+
+// El módulo principal cargó bien: si una carga anterior había fallado y disparado
+// una recarga automática (ver el guard en <head>), este es un episodio nuevo y sano.
+try { sessionStorage.removeItem('__cremac_reload_guard'); } catch {}

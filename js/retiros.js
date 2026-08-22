@@ -3,22 +3,30 @@
 import { sbFetch } from './api.js';
 import { state } from './state.js';
 import { toast, esc, closeModal, field } from './ui.js';
-import { isMantenimientoAdmin } from './mantenimiento.js';
+import { puedeVerTodosLosRetiros } from './mantenimiento.js';
 import { renderSelectSectores } from './sectores.js';
 
 // El carrito se guarda en localStorage para que sobreviva a un refresh de página
 // (pasa seguido en mobile) — se borra recién cuando el retiro queda confirmado.
-const CART_STORAGE_KEY = 'retiroCartPendiente';
-
-function guardarCartLocal() {
-  try { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.retiroCart)); } catch {}
+// La clave incluye el id del usuario: en una compu/tablet compartida del depósito,
+// si no fuera así, el que entra después heredaría el carrito del anterior sin darse cuenta.
+function cartStorageKey() {
+  return `retiroCartPendiente_${state.currentUser?.id || 'anon'}`;
 }
 
+function guardarCartLocal() {
+  try { localStorage.setItem(cartStorageKey(), JSON.stringify(state.retiroCart)); } catch {}
+}
+
+// Siempre resetea el carrito (al valor guardado de ESTE usuario, o vacío) — nunca deja
+// en memoria lo que haya quedado de una sesión anterior de otra persona en el mismo navegador.
 export function restaurarCartLocal() {
   try {
-    const raw = localStorage.getItem(CART_STORAGE_KEY);
-    if (raw) state.retiroCart = JSON.parse(raw);
-  } catch {}
+    const raw = localStorage.getItem(cartStorageKey());
+    state.retiroCart = raw ? JSON.parse(raw) : [];
+  } catch {
+    state.retiroCart = [];
+  }
 }
 
 export function addToRetiroCart(itemId, btnEl) {
@@ -138,7 +146,7 @@ export async function loadHistorialRetiros() {
   const box = document.getElementById('historialRetirosList');
   box.innerHTML = '<p style="color:var(--text-muted);font-size:13px">Cargando...</p>';
   try {
-    const admin = isMantenimientoAdmin();
+    const admin = puedeVerTodosLosRetiros();
     document.getElementById('historialExportActions').style.display = admin ? 'flex' : 'none';
     document.getElementById('historialFiltroUsuarioWrap').style.display = admin ? 'block' : 'none';
 
@@ -430,7 +438,7 @@ export async function enviarRetiroFinal() {
 
     toast('Retiro confirmado', 'success');
     state.retiroCart = [];
-    try { localStorage.removeItem(CART_STORAGE_KEY); } catch {}
+    try { localStorage.removeItem(cartStorageKey()); } catch {}
     closeModal('modalResumenRetiro');
     renderRetiroCart();
   } catch (e) {

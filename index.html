@@ -4,6 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Directorio — Cremac</title>
+<script>
+// Si con datos móviles débiles falla la carga de algún módulo JS, la app queda con
+// todos los botones muertos y sin ningún aviso (Object.assign(window,...) en main.js
+// nunca llega a ejecutarse). Este guard detecta esa falla puntual del script principal
+// y recarga la página una vez sola; si vuelve a fallar, muestra un aviso con botón manual
+// en vez de dejar al usuario adivinando que tiene que cerrar sesión y volver a entrar.
+window.__cremacModuleError = function () {
+  var KEY = '__cremac_reload_guard';
+  if (!sessionStorage.getItem(KEY)) {
+    sessionStorage.setItem(KEY, '1');
+    location.reload();
+    return;
+  }
+  var bar = document.createElement('div');
+  bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.2)';
+  bar.innerHTML = '<span>No se pudo cargar la app. Revisá tu conexión.</span>';
+  var btn = document.createElement('button');
+  btn.textContent = 'Reintentar';
+  btn.style.cssText = 'background:#fff;color:#dc2626;border:none;border-radius:6px;padding:4px 12px;font-weight:700;cursor:pointer';
+  btn.onclick = function () { sessionStorage.removeItem(KEY); location.reload(); };
+  bar.appendChild(btn);
+  (document.body || document.documentElement).appendChild(bar);
+};
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -471,7 +495,7 @@
                 <tr>
                   <th>Nombre</th>
                   <th>Email</th>
-                  <th>Rol</th>
+                  <th>Directorio</th>
                   <th>Mantenimiento</th>
                   <th>Estado</th>
                   <th>Acciones</th>
@@ -1221,6 +1245,7 @@
         <select id="u_rol">
           <option value="user">Usuario</option>
           <option value="admin">Administrador</option>
+          <option value="disabled">Desactivado (sin acceso a Directorio)</option>
         </select>
       </div>
       <div class="form-group full">
@@ -1230,6 +1255,12 @@
           <option value="comun">Común — solo Mantenimiento (buscar y retirar)</option>
           <option value="admin">Administrador de Mantenimiento</option>
         </select>
+      </div>
+      <div class="form-group full">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="u_puede_ver_retiros" style="width:auto">
+          Puede ver el historial completo de retiros (todos los usuarios) y exportarlo
+        </label>
       </div>
     </div>
     <div class="modal-footer">
@@ -1421,6 +1452,6 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js"></script>
+<script type="module" src="js/main.js" onerror="window.__cremacModuleError()"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 // Módulo Mantenimiento: switch de pantalla completa y control de acceso.
 // El catálogo/buscador de repuestos se agrega acá en los próximos pasos.
-import { state } from './state.js';
+import { state, guardarUbicacion, leerUbicacionGuardada } from './state.js';
 import { isOwner } from './admin.js';
 import { loadItems } from './items.js';
 import { renderFamiliasPanel } from './familias.js';
@@ -12,12 +12,22 @@ export function isMantenimientoAdmin() {
   return state.currentUser?.mantenimiento_rol === 'admin' || isOwner();
 }
 
-export function isMantenimientoComun() {
-  return state.currentUser?.mantenimiento_rol === 'comun' && !isMantenimientoAdmin();
+// Espeja can_view_all_retiros() del lado de Supabase. Ver el historial completo de
+// retiros (de todos los usuarios) y exportarlo es un permiso aparte del de admin de
+// mantenimiento — por defecto solo lo tiene el superadmin, salvo que habilite a alguien.
+export function puedeVerTodosLosRetiros() {
+  return state.currentUser?.puede_ver_retiros === true || isOwner();
+}
+
+// El acceso a Directorio ahora es un permiso propio ("Permisos de Directorio" = Desactivado),
+// independiente del rol de Mantenimiento — antes se inferís mal del rol de Mantenimiento.
+// El owner nunca queda bloqueado, aunque su propia fila tenga rol='disabled' por error.
+export function directorioDesactivado() {
+  return state.currentUser?.rol === 'disabled' && !isOwner();
 }
 
 export function initMantenimientoAccess() {
-  state.mantenimientoOnly = isMantenimientoComun();
+  state.mantenimientoOnly = directorioDesactivado();
 
   if (isMantenimientoAdmin()) {
     document.getElementById('btnMantenimiento').style.display = 'flex';
@@ -31,7 +41,7 @@ export function initMantenimientoAccess() {
   return false;
 }
 
-export function showMantenimiento(canExit = true) {
+export function showMantenimiento(canExit = true, initialTab) {
   restaurarCartLocal();
   document.getElementById('appScreen').classList.remove('visible');
   document.getElementById('mantenimientoScreen').classList.add('visible');
@@ -47,7 +57,12 @@ export function showMantenimiento(canExit = true) {
   document.getElementById('manttabDividerAdmin').style.display = admin ? 'block' : 'none';
   // El sub-tab de familias/subfamilias es exclusivo del owner, no de cualquier admin de mantenimiento.
   document.getElementById('mantAdminSubtab-familias').style.display = isOwner() ? 'flex' : 'none';
-  showMantTab('buscar');
+
+  // Al recargar la página, vuelve a la pestaña de Mantenimiento en la que estaba
+  // (a menos que ya no tenga permiso para verla, ej. "admin" sin serlo).
+  if (!initialTab) initialTab = leerUbicacionGuardada()?.mantTab || 'buscar';
+  if (initialTab === 'admin' && !admin) initialTab = 'buscar';
+  showMantTab(initialTab);
   setMobileMenuMantenimiento(true, canExit);
 
   loadItems();
@@ -55,6 +70,7 @@ export function showMantenimiento(canExit = true) {
 
 export function exitMantenimiento() {
   if (state.mantenimientoOnly) return; // usuario común: sin salida
+  guardarUbicacion({ screen: 'directorio' });
   document.getElementById('mantenimientoScreen').classList.remove('visible');
   document.getElementById('appScreen').classList.add('visible');
   setMobileMenuMantenimiento(false);
@@ -89,6 +105,7 @@ function setMobileMenuMantenimiento(dentro, canExit = true) {
 
 // ===== NAV =====
 export function showMantTab(tab) {
+  guardarUbicacion({ screen: 'mantenimiento', mantTab: tab });
   document.querySelectorAll('#mantenimientoScreen .nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('manttab-' + tab).classList.add('active');
   document.getElementById('paneMantBuscar').style.display  = tab === 'buscar'  ? 'block' : 'none';
@@ -98,7 +115,7 @@ export function showMantTab(tab) {
   if (tab === 'admin') showMantAdminSubtab('repuestos');
   if (tab === 'carrito') renderRetiroCart();
   if (tab === 'retiros') {
-    document.getElementById('historialRetirosTitle').textContent = isMantenimientoAdmin() ? '📋 Historial de retiros' : '📋 Mis retiros';
+    document.getElementById('historialRetirosTitle').textContent = puedeVerTodosLosRetiros() ? '📋 Historial de retiros' : '📋 Mis retiros';
     loadHistorialRetiros();
   }
 }

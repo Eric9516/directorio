@@ -37,3 +37,27 @@ export const state = {
   historialAdmin: false,
   sectores: [],
 };
+
+// Recuerda en qué pantalla/pestaña estaba cada usuario para que un refresh de página
+// (frecuente en mobile) lo deje donde estaba, en vez de mandarlo siempre a Directorio.
+// Escapada por usuario, igual que el carrito, para no mezclar la ubicación de uno con
+// la de otro en una compu/tablet compartida.
+function ubicacionKey() {
+  return `ultimaUbicacion_${state.currentUser?.id || 'anon'}`;
+}
+
+export function guardarUbicacion(patch) {
+  try {
+    const actual = leerUbicacionGuardada() || {};
+    localStorage.setItem(ubicacionKey(), JSON.stringify({ ...actual, ...patch }));
+  } catch {}
+}
+
+export function leerUbicacionGuardada() {
+  try {
+    const raw = localStorage.getItem(ubicacionKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
