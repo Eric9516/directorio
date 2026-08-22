@@ -388,13 +388,28 @@ export async function exportarRetirosPeriodo() {
   }
 }
 
+// Snapshot armado por confirmRetiro() y consumido por enviarRetiroFinal(). Antes,
+// el paso final volvía a leer #retiroSector/#retiroObsGeneral del DOM en el momento
+// del click — si por lo que sea esos elementos ya no estaban (ej: la sección del
+// carrito se había vuelto a dibujar entre medio), la lectura fallaba con un error
+// no controlado ANTES de siquiera entrar al try/catch, y el botón "no hacía nada"
+// sin ningún aviso. Ahora el dato se captura una sola vez al abrir el resumen y no
+// se depende más del DOM para confirmar.
+let retiroPendiente = null;
+
 // Paso 1: valida y muestra el resumen — todavía no guarda nada.
 export function confirmRetiro() {
   if (!state.retiroCart.length) return;
-  const sectorId = document.getElementById('retiroSector').value;
+  const sectorId = document.getElementById('retiroSector')?.value;
   if (!sectorId) { toast('Elegí el sector antes de confirmar', 'error'); return; }
   const sector = state.sectores.find(s => s.id === sectorId);
-  const observacionGeneral = document.getElementById('retiroObsGeneral').value.trim();
+  const observacionGeneral = document.getElementById('retiroObsGeneral')?.value.trim() || '';
+
+  retiroPendiente = {
+    sectorId,
+    observacionGeneral,
+    items: state.retiroCart.map(c => ({ ...c })),
+  };
 
   document.getElementById('resumenRetiroBody').innerHTML = `
     <div class="detail-grid" style="margin-bottom:14px">
@@ -402,7 +417,7 @@ export function confirmRetiro() {
       ${field('Observación general', observacionGeneral)}
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      ${state.retiroCart.map(c => `
+      ${retiroPendiente.items.map(c => `
         <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
           <span><strong>${esc(c.codigo)}</strong> — ${esc(c.descripcion)}${c.observacion ? ` <span style="color:var(--text-muted)">(${esc(c.observacion)})</span>` : ''}</span>
           <span style="font-weight:700;white-space:nowrap">x${c.cantidad}</span>
@@ -414,8 +429,11 @@ export function confirmRetiro() {
 
 // Paso 2: recién acá se escribe en la base, solo si el usuario aprueba el resumen.
 export async function enviarRetiroFinal() {
-  const sectorId = document.getElementById('retiroSector').value;
-  const observacionGeneral = document.getElementById('retiroObsGeneral').value.trim();
+  if (!retiroPendiente) {
+    toast('No hay ningún retiro pendiente de confirmar, volvé a armarlo', 'error');
+    return;
+  }
+  const { sectorId, observacionGeneral, items } = retiroPendiente;
 
   try {
     const retiro = await sbFetch('/retiros', {
@@ -424,7 +442,7 @@ export async function enviarRetiroFinal() {
     });
     const retiroId = retiro[0].id;
 
-    for (const line of state.retiroCart) {
+    for (const line of items) {
       await sbFetch('/retiro_items', {
         method: 'POST',
         body: JSON.stringify({
@@ -438,6 +456,7 @@ export async function enviarRetiroFinal() {
 
     toast('Retiro confirmado', 'success');
     state.retiroCart = [];
+    retiroPendiente = null;
     try { localStorage.removeItem(cartStorageKey()); } catch {}
     closeModal('modalResumenRetiro');
     renderRetiroCart();

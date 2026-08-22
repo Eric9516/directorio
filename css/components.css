@@ -155,6 +155,11 @@ tbody tr:hover { background: var(--surface2); }
   z-index: 999; opacity: 0; transform: translateY(12px);
   transition: all 0.25s; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
   border-left: 4px solid var(--blue); max-width: 300px;
+  /* Aunque quede invisible (opacity:0), sigue ocupando su lugar fijo abajo a la
+     derecha y por defecto SIGUE recibiendo clics — tapaba en silencio cualquier
+     botón que cayera ahí debajo (ej: "Sí, confirmar retiro" en pantallas angostas)
+     apenas se mostraba el primer cartel. */
+  pointer-events: none;
 }
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast.success { border-left-color: var(--success); }
