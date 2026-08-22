@@ -4,7 +4,7 @@ import { state } from './state.js';
 import { isOwner } from './admin.js';
 import { loadItems } from './items.js';
 import { renderFamiliasPanel } from './familias.js';
-import { loadHistorialRetiros, renderRetiroCart } from './retiros.js';
+import { loadHistorialRetiros, renderRetiroCart, restaurarCartLocal } from './retiros.js';
 import { renderSectoresPanel } from './sectores.js';
 
 // Espeja is_mantenimiento_admin() del lado de Supabase (misma condición).
@@ -40,6 +40,7 @@ export function initMantenimientoAccess() {
 }
 
 export function showMantenimiento(canExit = true) {
+  restaurarCartLocal();
   document.getElementById('appScreen').classList.remove('visible');
   document.getElementById('mantenimientoScreen').classList.add('visible');
   document.getElementById('btnVolverDirectorio').style.display = canExit ? 'flex' : 'none';

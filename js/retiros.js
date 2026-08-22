@@ -6,6 +6,21 @@ import { toast, esc, closeModal, field } from './ui.js';
 import { isMantenimientoAdmin } from './mantenimiento.js';
 import { renderSelectSectores } from './sectores.js';
 
+// El carrito se guarda en localStorage para que sobreviva a un refresh de página
+// (pasa seguido en mobile) — se borra recién cuando el retiro queda confirmado.
+const CART_STORAGE_KEY = 'retiroCartPendiente';
+
+function guardarCartLocal() {
+  try { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.retiroCart)); } catch {}
+}
+
+export function restaurarCartLocal() {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    if (raw) state.retiroCart = JSON.parse(raw);
+  } catch {}
+}
+
 export function addToRetiroCart(itemId, btnEl) {
   const it = state.items.find(x => x.id === itemId);
   if (!it) return;
@@ -16,6 +31,7 @@ export function addToRetiroCart(itemId, btnEl) {
   } else {
     state.retiroCart.push({ item_id: itemId, codigo: it.codigo, descripcion: it.descripcion, cantidad: 1, observacion: '' });
   }
+  guardarCartLocal();
   flashAgregado(btnEl);
   renderRetiroCart();
 }
@@ -39,15 +55,18 @@ export function updateRetiroCantidad(itemId, value) {
   if (!line) return;
   const n = parseInt(value, 10);
   line.cantidad = n > 0 ? n : 1;
+  guardarCartLocal();
 }
 
 export function updateRetiroObservacion(itemId, value) {
   const line = state.retiroCart.find(c => c.item_id === itemId);
   if (line) line.observacion = value;
+  guardarCartLocal();
 }
 
 export function removeFromRetiroCart(itemId) {
   state.retiroCart = state.retiroCart.filter(c => c.item_id !== itemId);
+  guardarCartLocal();
   renderRetiroCart();
 }
 
@@ -409,6 +428,7 @@ export async function enviarRetiroFinal() {
 
     toast('Retiro confirmado', 'success');
     state.retiroCart = [];
+    try { localStorage.removeItem(CART_STORAGE_KEY); } catch {}
     closeModal('modalResumenRetiro');
     renderRetiroCart();
   } catch (e) {
